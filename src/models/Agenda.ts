@@ -1,5 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { IPunto, PuntoSchema } from '@/models/Punto';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 /*
 La interfaz IAgenda define la estructura de un documento de agenda.
@@ -8,7 +7,7 @@ Cada agenda tiene un título y una lista de puntos.
 
 export interface IAgenda extends Document {
   titulo: string;
-  puntos: IPunto[];
+  puntos: Types.ObjectId[];
 }
 
 /*
@@ -19,7 +18,7 @@ Cada agenda tiene un campo 'titulo' que es una cadena de texto y un campo
 
 const AgendaSchema = new Schema<IAgenda>({
   titulo: { type: String, required: true },
-  puntos: { type: [PuntoSchema], default: []}
+  puntos: [{ type: Schema.Types.ObjectId, ref: 'Punto' }]
 });
 
 /*
