@@ -1,6 +1,11 @@
-import { PuntoAprobacionModel } from './PuntoAprobacion';
-import { PuntoDeFondoModel } from './PuntoDeFondo';
+import { PuntoAprobacionModel } from '@/models/PuntoAprobacion';
+import { PuntoDeFondoModel } from '@/models/PuntoDeFondo';
 import { TipoPunto } from './Punto';
+
+/*
+Esta interfaz define la estructura de los datos necesarios
+para crear un punto en una agenda.
+*/
 
 interface PuntoData {
   titulo: string;
@@ -11,6 +16,11 @@ interface PuntoData {
   votosEnContra?: number;
   decisiones?: string[];
 }
+
+/*
+PuntoFactory es una clase que se encarga de crear puntos
+en una agenda según el tipo especificado.
+*/
 
 export class PuntoFactory {
   static async crearPunto(data: PuntoData) {
