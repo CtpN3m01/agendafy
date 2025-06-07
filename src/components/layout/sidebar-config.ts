@@ -18,17 +18,6 @@ export const defaultSidebarConfig: SidebarConfig = {
       title: "Principal",
       items: [
         {
-          title: "Home",
-          icon: Home,
-          href: "/",
-          isActive: true,
-        },
-      ],
-    },
-    {
-      title: "Gestión",
-      items: [
-        {
           title: "Reuniones",
           icon: Video,
           href: "/reuniones",
