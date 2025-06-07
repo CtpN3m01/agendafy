@@ -49,23 +49,37 @@ export interface RegisterData {
   confirmPassword: string;
   acceptTerms: boolean;
   organizationCode?: string;
+  // Campos para el backend
+  nombreUsuario?: string;
+  nombre?: string;
+  apellidos?: string;
+  correo?: string;
+  contrasena?: string;
 }
 
 export interface RecoveryData {
   email: string;
+  // Campo para el backend
+  correo?: string;
 }
 
 export interface ResetPasswordData {
   token: string;
-  newPassword: string;
-  confirmPassword: string;
+  nuevaContrasena: string;
+  confirmarContrasena: string;
 }
 
 export interface AuthResponse {
   success: boolean;
   message: string;
   token?: string;
-  user?: UserProfile;
+  user?: {
+    id: string;
+    nombreUsuario: string;
+    nombre: string;
+    apellidos: string;
+    correo: string;
+  };
   errors?: Record<string, string[]>;
 }
 

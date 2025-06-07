@@ -1,10 +1,11 @@
+// src/services/EmailService.ts
 import nodemailer from 'nodemailer';
 
 export class EmailService {
   private transporter;
 
   constructor() {
-    this.transporter = nodemailer.createTransporter({
+    this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.GMAIL_USER,
