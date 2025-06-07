@@ -2,6 +2,7 @@
 // It’s not tied to the database model, and usually only includes the data needed by the consumer.
 
 export interface CrearReunionDTO {
+    _id: string; // ID generado por el cliente
     titulo: string;
     organizacion: string;
     hora_inicio: Date;
