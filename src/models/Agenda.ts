@@ -1,14 +1,13 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { IPunto, PuntoSchema } from './Punto';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface IAgenda extends Document {
   titulo: string;
-  puntos: IPunto[];
+  puntos: Types.ObjectId[]; // IDs de puntos
 }
 
 const AgendaSchema = new Schema<IAgenda>({
   titulo: { type: String, required: true },
-  puntos: { type: [PuntoSchema], default: []}
+  puntos: [{ type: Schema.Types.ObjectId, ref: 'Punto', default: [] }]
 });
 
 export const AgendaModel =

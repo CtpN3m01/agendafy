@@ -2,5 +2,5 @@ import { CrearPuntoDTO } from './PuntoDTO';
 
 export interface CrearAgendaDTO {
   titulo: string;
-  puntos: CrearPuntoDTO[];
+  puntos: string[]; // IDs de los puntos
 }

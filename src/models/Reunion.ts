@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface IReunion extends Document {
   titulo: string;
@@ -10,6 +10,7 @@ export interface IReunion extends Document {
   lugar: string;
   tipo_reunion: 'Extraordinaria' | 'Ordinaria';
   modalidad: 'Presencial' | 'Virtual';
+  agenda?: Types.ObjectId; // Referencia a la agenda
 }
 
 const ReunionSchema = new Schema<IReunion>({
@@ -30,6 +31,7 @@ const ReunionSchema = new Schema<IReunion>({
     enum: ['Presencial', 'Virtual'],
     required: true,
   },
+  agenda: { type: Schema.Types.ObjectId, ref: 'Agendas', required: false }, // Nueva referencia
 });
 
 export const ReunionModel = mongoose.models.Reunion || mongoose.model<IReunion>('Reuniones', ReunionSchema);
