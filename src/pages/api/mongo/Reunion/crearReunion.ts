@@ -13,7 +13,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const reunionData = req.body;
 
         // Validación básica
-        if (!reunionData._id || !reunionData.titulo || !reunionData.organizacion || !reunionData.hora_inicio || !reunionData.lugar || !reunionData.tipo_reunion || !reunionData.modalidad) {
+        if (!reunionData._id || 
+            !reunionData.titulo || 
+            !reunionData.organizacion || 
+            !reunionData.hora_inicio || 
+            !reunionData.lugar || 
+            !reunionData.tipo_reunion || 
+            !reunionData.modalidad ||
+            !reunionData.agenda ||
+            !reunionData.puntos
+        ) {
             return res.status(400).json({ message: 'Datos incompletos' });
         }
 
