@@ -1,41 +1,53 @@
-// src/app/auth/login/page.tsx
+// src/app/auth/register/page.tsx
 "use client";
 
 import { AppLayout } from "@/components/layout";
-import { LoginForm } from "@/components/auth/login-form";
-import { LoginCredentials, AuthResponse } from "@/types";
+import { RegisterForm } from "@/components/auth/register-form";
+import { RegisterData, AuthResponse } from "@/types";
 import { useRouter } from "next/navigation";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
 
-  const handleLogin = async (credentials: LoginCredentials): Promise<AuthResponse> => {
+  const handleRegister = async (data: RegisterData): Promise<AuthResponse> => {
     try {
-      const response = await fetch('/api/auth/login', {
+      // Validar que las contraseñas coincidan
+      if (data.password !== data.confirmPassword) {
+        return {
+          success: false,
+          message: "Las contraseñas no coinciden",
+          errors: {
+            confirmPassword: ["Las contraseñas no coinciden"]
+          }
+        };
+      }
+
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: credentials.email,
-          password: credentials.password
+          name: data.name,
+          email: data.email,
+          password: data.password
         }),
       });
 
-      const data: AuthResponse = await response.json();
+      const result: AuthResponse = await response.json();
 
-      if (data.success && data.token) {
+      if (result.success && result.token) {
         // Guardar token en localStorage
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('authToken', result.token);
+        localStorage.setItem('user', JSON.stringify(result.user));
         
         // Redirigir al dashboard o página principal
         router.push('/dashboard');
       }
 
-      return data;
+      return result;
     } catch (error) {
-      console.error("Error en login:", error);
+      console.error("Error en registro:", error);
       return {
         success: false,
         message: "Error de conexión"
@@ -43,21 +55,13 @@ export default function LoginPage() {
     }
   };
 
-  const handleForgotPassword = () => {
-    router.push('/auth/forgot-password');
-  };
-
-  const handleRegister = () => {
-    router.push('/auth/register');
+  const handleLogin = () => {
+    router.push('/auth/login');
   };
 
   return (
     <AppLayout>
-      <LoginForm 
-        onLogin={handleLogin} 
-        onForgotPassword={handleForgotPassword}
-        onRegister={handleRegister}
-      />
+      <RegisterForm onRegister={handleRegister} onLogin={handleLogin} />
     </AppLayout>
   );
 }

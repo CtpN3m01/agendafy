@@ -1,41 +1,34 @@
-// src/app/auth/login/page.tsx
+// src/app/auth/forgot-password/page.tsx
 "use client";
 
 import { AppLayout } from "@/components/layout";
-import { LoginForm } from "@/components/auth/login-form";
-import { LoginCredentials, AuthResponse } from "@/types";
+import { RecoveryForm } from "@/components/auth/recovery-form";
+import { RecoveryData, AuthResponse } from "@/types";
 import { useRouter } from "next/navigation";
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   const router = useRouter();
 
-  const handleLogin = async (credentials: LoginCredentials): Promise<AuthResponse> => {
+  const handleRecovery = async (data: RecoveryData): Promise<AuthResponse> => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: credentials.email,
-          password: credentials.password
+          email: data.email
         }),
       });
 
-      const data: AuthResponse = await response.json();
-
-      if (data.success && data.token) {
-        // Guardar token en localStorage
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        // Redirigir al dashboard o página principal
-        router.push('/dashboard');
-      }
-
-      return data;
+      const result = await response.json();
+      
+      return {
+        success: result.success,
+        message: result.message
+      };
     } catch (error) {
-      console.error("Error en login:", error);
+      console.error("Error en recuperación:", error);
       return {
         success: false,
         message: "Error de conexión"
@@ -43,21 +36,13 @@ export default function LoginPage() {
     }
   };
 
-  const handleForgotPassword = () => {
-    router.push('/auth/forgot-password');
-  };
-
-  const handleRegister = () => {
-    router.push('/auth/register');
+  const handleBackToLogin = () => {
+    router.push('/auth/login');
   };
 
   return (
     <AppLayout>
-      <LoginForm 
-        onLogin={handleLogin} 
-        onForgotPassword={handleForgotPassword}
-        onRegister={handleRegister}
-      />
+      <RecoveryForm onRecovery={handleRecovery} onBackToLogin={handleBackToLogin} />
     </AppLayout>
   );
 }
