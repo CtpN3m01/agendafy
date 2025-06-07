@@ -10,7 +10,8 @@ export interface IReunion extends Document {
   lugar: string;
   tipo_reunion: 'Extraordinaria' | 'Ordinaria';
   modalidad: 'Presencial' | 'Virtual';
-  agenda?: Types.ObjectId; // Referencia a la agenda
+  agenda: string; // Solo el título de la agenda
+  puntos: Types.ObjectId[]; // Lista de referencias a puntos
 }
 
 const ReunionSchema = new Schema<IReunion>({
@@ -31,7 +32,9 @@ const ReunionSchema = new Schema<IReunion>({
     enum: ['Presencial', 'Virtual'],
     required: true,
   },
-  agenda: { type: Schema.Types.ObjectId, ref: 'Agendas', required: false }, // Nueva referencia
+  agenda: { type: String, required: true },
+  puntos: [{ type: Schema.Types.ObjectId, ref: 'Punto', default: [] }], 
 });
 
-export const ReunionModel = mongoose.models.Reunion || mongoose.model<IReunion>('Reuniones', ReunionSchema);
+export const ReunionModel =
+  mongoose.models.Reunion || mongoose.model<IReunion>('Reuniones', ReunionSchema);
