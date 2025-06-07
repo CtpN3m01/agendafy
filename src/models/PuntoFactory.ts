@@ -4,12 +4,14 @@ import { TipoPunto } from './Punto';
 
 interface PuntoData {
   titulo: string;
-  descripcion: string;
+  comentarios: string;
   duracion: number;
   tipo: TipoPunto;
   votosAFavor?: number;
   votosEnContra?: number;
   decisiones?: string[];
+  expositor: string;    
+  archivos?: string[];
 }
 
 export class PuntoFactory {
