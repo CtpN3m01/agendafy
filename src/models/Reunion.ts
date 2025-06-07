@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface IReunion extends Document {
+  _id: string; // Manually set by the client
   titulo: string;
   organizacion: string;
   hora_inicio: Date;
@@ -15,6 +16,7 @@ export interface IReunion extends Document {
 }
 
 const ReunionSchema = new Schema<IReunion>({
+  _id: { type: String, required: true },
   titulo: { type: String, required: true },
   organizacion: { type: String, required: true },
   hora_inicio: { type: Date, required: true },
