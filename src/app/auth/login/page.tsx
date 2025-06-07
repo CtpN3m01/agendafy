@@ -1,27 +1,54 @@
+// src/app/auth/login/page.tsx
 "use client";
 
 import { AppLayout } from "@/components/layout";
 import { LoginForm } from "@/components/auth/login-form";
 import { LoginCredentials, AuthResponse } from "@/types";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const handleLogin = async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    console.log("Login:", credentials);
-    // Aquí iría la lógica de autenticación
-    return {
-      success: true,
-      message: "Login exitoso"
-    };
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password
+        }),
+      });
+
+      const data: AuthResponse = await response.json();
+
+      if (data.success && data.token) {
+        // Guardar token en localStorage
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Redirigir al dashboard o página principal
+        router.push('/dashboard');
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error en login:", error);
+      return {
+        success: false,
+        message: "Error de conexión"
+      };
+    }
   };
 
   const handleForgotPassword = () => {
-    console.log("Ir a recuperación");
-    // Aquí puedes redirigir a la página de recuperación
+    router.push('/auth/forgot-password');
   };
 
   const handleRegister = () => {
-    console.log("Ir a registro");
-    // Aquí puedes redirigir a la página de registro
+    router.push('/auth/register');
   };
 
   return (

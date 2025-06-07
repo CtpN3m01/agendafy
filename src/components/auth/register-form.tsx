@@ -1,13 +1,7 @@
+// src/components/auth/register-form.tsx
 "use client";
 
 import { useState } from "react";
-import { UserPlus, Mail, Lock, User, Eye, EyeOff, Building } from "lucide-react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { RegisterData, AuthResponse } from "@/types";
 
 interface RegisterFormProps {
@@ -91,206 +85,141 @@ export function RegisterForm({ onRegister, onLogin }: RegisterFormProps) {
   };
 
   return (
-    <div className="max-w-md mx-auto">
-      <Card>
-        <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center gap-2 text-2xl">
-            <UserPlus className="h-6 w-6" />
-            Crear Cuenta
-          </CardTitle>
-          <CardDescription>
-            Únete a Agendafy y comienza a gestionar tus reuniones
-          </CardDescription>
-        </CardHeader>
+    <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Crear Cuenta</h2>
+        <p className="text-gray-600">Únete a Agendafy</p>
+      </div>
 
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            {/* Error general */}
-            {errors.general && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-                {errors.general[0]}
-              </div>
-            )}
+      {errors.general && (
+        <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
+          {errors.general[0]}
+        </div>
+      )}
 
-            {/* Nombre */}
-            <div className="space-y-2">
-              <Label htmlFor="name" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Nombre completo
-              </Label>
-              <Input
-                id="name"
-                type="text"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                placeholder="Juan Pérez"
-                required
-                className={errors.name ? "border-red-500" : ""}
-              />
-              {errors.name && (
-                <p className="text-sm text-red-600">{errors.name[0]}</p>
-              )}
-            </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+            Nombre Completo
+          </label>
+          <input
+            type="text"
+            id="name"
+            value={formData.name}
+            onChange={(e) => handleInputChange('name', e.target.value)}
+            required
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          />
+          {errors.name && (
+            <p className="text-red-500 text-sm mt-1">{errors.name[0]}</p>
+          )}
+        </div>
 
-            {/* Email */}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                placeholder="juan@ejemplo.com"
-                required
-                className={errors.email ? "border-red-500" : ""}
-              />
-              {errors.email && (
-                <p className="text-sm text-red-600">{errors.email[0]}</p>
-              )}
-            </div>
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            Email
+          </label>
+          <input
+            type="email"
+            id="email"
+            value={formData.email}
+            onChange={(e) => handleInputChange('email', e.target.value)}
+            required
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          />
+          {errors.email && (
+            <p className="text-red-500 text-sm mt-1">{errors.email[0]}</p>
+          )}
+        </div>
 
-            {/* Contraseña */}
-            <div className="space-y-2">
-              <Label htmlFor="password" className="flex items-center gap-2">
-                <Lock className="h-4 w-4" />
-                Contraseña
-              </Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  placeholder="Mínimo 8 caracteres"
-                  required
-                  className={errors.password ? "border-red-500 pr-10" : "pr-10"}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-              {errors.password && (
-                <p className="text-sm text-red-600">{errors.password[0]}</p>
-              )}
-            </div>
-
-            {/* Confirmar contraseña */}
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                  placeholder="Repite tu contraseña"
-                  required
-                  className={errors.confirmPassword ? "border-red-500 pr-10" : "pr-10"}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-              {errors.confirmPassword && (
-                <p className="text-sm text-red-600">{errors.confirmPassword[0]}</p>
-              )}
-            </div>
-
-            {/* Código de organización (opcional) */}
-            <div className="space-y-2">
-              <Label htmlFor="organizationCode" className="flex items-center gap-2">
-                <Building className="h-4 w-4" />
-                Código de organización
-                <span className="text-xs text-muted-foreground">(opcional)</span>
-              </Label>
-              <Input
-                id="organizationCode"
-                type="text"
-                value={formData.organizationCode}
-                onChange={(e) => handleInputChange("organizationCode", e.target.value)}
-                placeholder="ABC123"
-                className={errors.organizationCode ? "border-red-500" : ""}
-              />
-              {errors.organizationCode && (
-                <p className="text-sm text-red-600">{errors.organizationCode[0]}</p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Si tienes un código de organización, ingrésalo para unirte automáticamente
-              </p>
-            </div>
-
-            {/* Términos y condiciones */}
-            <div className="space-y-2">
-              <div className="flex items-start space-x-2">
-                <Checkbox
-                  id="acceptTerms"
-                  checked={formData.acceptTerms}
-                  onCheckedChange={(checked) => handleInputChange("acceptTerms", !!checked)}
-                  className={errors.acceptTerms ? "border-red-500" : ""}
-                />
-                <Label htmlFor="acceptTerms" className="text-sm leading-relaxed">
-                  Acepto los{" "}
-                  <Button variant="link" className="p-0 h-auto text-sm">
-                    términos y condiciones
-                  </Button>{" "}
-                  y la{" "}
-                  <Button variant="link" className="p-0 h-auto text-sm">
-                    política de privacidad
-                  </Button>
-                </Label>
-              </div>
-              {errors.acceptTerms && (
-                <p className="text-sm text-red-600">{errors.acceptTerms[0]}</p>
-              )}
-            </div>
-          </CardContent>
-
-          <CardFooter className="flex flex-col space-y-4">
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? "Creando cuenta..." : "Crear Cuenta"}
-            </Button>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <Separator className="w-full" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  o
-                </span>
-              </div>
-            </div>
-
-            <Button
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            Contraseña
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              id="password"
+              value={formData.password}
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+            <button
               type="button"
-              variant="outline"
-              className="w-full"
-              onClick={onLogin}
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
             >
-              Ya tengo una cuenta
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+              {showPassword ? "Ocultar" : "Mostrar"}
+            </button>
+          </div>
+          {errors.password && (
+            <p className="text-red-500 text-sm mt-1">{errors.password[0]}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+            Confirmar Contraseña
+          </label>
+          <div className="relative">
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              id="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+            >
+              {showConfirmPassword ? "Ocultar" : "Mostrar"}
+            </button>
+          </div>
+          {errors.confirmPassword && (
+            <p className="text-red-500 text-sm mt-1">{errors.confirmPassword[0]}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={formData.acceptTerms}
+              onChange={(e) => handleInputChange('acceptTerms', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <span className="ml-2 text-sm text-gray-600">
+              Acepto los términos y condiciones
+            </span>
+          </label>
+          {errors.acceptTerms && (
+            <p className="text-red-500 text-sm mt-1">{errors.acceptTerms[0]}</p>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+        >
+          {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
+        </button>
+
+        <div className="text-center">
+          <span className="text-sm text-gray-600">¿Ya tienes cuenta? </span>
+          <button
+            type="button"
+            onClick={onLogin}
+            className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+          >
+            Inicia sesión aquí
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -1,13 +1,7 @@
+// src/components/auth/login-form.tsx
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff, LogIn, Mail, Lock } from "lucide-react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { LoginCredentials, AuthResponse } from "@/types";
 
 interface LoginFormProps {
@@ -52,138 +46,100 @@ export function LoginForm({ onLogin, onForgotPassword, onRegister }: LoginFormPr
   };
 
   return (
-    <div className="max-w-md mx-auto">
-      <Card>
-        <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center gap-2 text-2xl">
-            <LogIn className="h-6 w-6" />
-            Iniciar Sesión
-          </CardTitle>
-          <CardDescription>
-            Ingresa tus credenciales para acceder a Agendafy
-          </CardDescription>
-        </CardHeader>
+    <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Iniciar Sesión</h2>
+        <p className="text-gray-600">Accede a tu cuenta de Agendafy</p>
+      </div>
 
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            {/* Error general */}
-            {errors.general && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-                {errors.general[0]}
-              </div>
-            )}
+      {errors.general && (
+        <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
+          {errors.general[0]}
+        </div>
+      )}
 
-            {/* Email */}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={credentials.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                placeholder="tu@ejemplo.com"
-                required
-                className={errors.email ? "border-red-500" : ""}
-              />
-              {errors.email && (
-                <p className="text-sm text-red-600">{errors.email[0]}</p>
-              )}
-            </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            Email o Usuario
+          </label>
+          <input
+            type="text"
+            id="email"
+            value={credentials.email}
+            onChange={(e) => handleInputChange('email', e.target.value)}
+            required
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          />
+          {errors.email && (
+            <p className="text-red-500 text-sm mt-1">{errors.email[0]}</p>
+          )}
+        </div>
 
-            {/* Contraseña */}
-            <div className="space-y-2">
-              <Label htmlFor="password" className="flex items-center gap-2">
-                <Lock className="h-4 w-4" />
-                Contraseña
-              </Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={credentials.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  placeholder="Tu contraseña"
-                  required
-                  className={errors.password ? "border-red-500 pr-10" : "pr-10"}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-              {errors.password && (
-                <p className="text-sm text-red-600">{errors.password[0]}</p>
-              )}
-            </div>
-
-            {/* Recordarme */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remember"
-                  checked={credentials.rememberMe}
-                  onCheckedChange={(checked) => handleInputChange("rememberMe", !!checked)}
-                />
-                <Label htmlFor="remember" className="text-sm">
-                  Recordarme
-                </Label>
-              </div>
-
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                onClick={onForgotPassword}
-                className="px-0 h-auto"
-              >
-                ¿Olvidaste tu contraseña?
-              </Button>
-            </div>
-          </CardContent>
-
-          <CardFooter className="flex flex-col space-y-4">
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
-            </Button>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <Separator className="w-full" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  o
-                </span>
-              </div>
-            </div>
-
-            <Button
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            Contraseña
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              id="password"
+              value={credentials.password}
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+            <button
               type="button"
-              variant="outline"
-              className="w-full"
-              onClick={onRegister}
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
             >
-              Crear nueva cuenta
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+              {showPassword ? "Ocultar" : "Mostrar"}
+            </button>
+          </div>
+          {errors.password && (
+            <p className="text-red-500 text-sm mt-1">{errors.password[0]}</p>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={credentials.rememberMe}
+              onChange={(e) => handleInputChange('rememberMe', e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <span className="ml-2 text-sm text-gray-600">Recordarme</span>
+          </label>
+          <button
+            type="button"
+            onClick={onForgotPassword}
+            className="text-sm text-blue-600 hover:text-blue-500"
+          >
+            ¿Olvidaste tu contraseña?
+          </button>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+        >
+          {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+        </button>
+
+        <div className="text-center">
+          <span className="text-sm text-gray-600">¿No tienes cuenta? </span>
+          <button
+            type="button"
+            onClick={onRegister}
+            className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+          >
+            Regístrate aquí
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -5,6 +5,10 @@ export interface IPersona extends Document {
   apellidos: string;
   correo: string;
   rol: 'Presidente' | 'SubPresidente' | 'Tesorero' | 'Vocal';
+  organizacion: mongoose.Types.ObjectId;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const PersonaSchema = new Schema<IPersona>({
@@ -15,9 +19,13 @@ export const PersonaSchema = new Schema<IPersona>({
     type: String,
     enum: ['Presidente', 'SubPresidente', 'Tesorero', 'Vocal'],
     required: true,
-  }
+  },
+  organizacion: { type: Schema.Types.ObjectId, ref: 'Organizacion', required: true },
+  isActive: { type: Boolean, default: true }
+}, {
+  timestamps: true
 });
 
 export const PersonaModel =
   mongoose.models.Persona ||
-  mongoose.model<IPersona>('Personas', PersonaSchema);
+  mongoose.model<IPersona>('Persona', PersonaSchema);
