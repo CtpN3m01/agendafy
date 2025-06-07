@@ -13,7 +13,7 @@ export interface IAgenda extends Document {
 /*
 AgendaSchema define el esquema de Mongoose para la colección de agendas.
 Cada agenda tiene un campo 'titulo' que es una cadena de texto y un campo 
-'puntos' que es un arreglo de objetos Punto.
+'puntos' que es un arreglo de objetos Id.
 */
 
 const AgendaSchema = new Schema<IAgenda>({
