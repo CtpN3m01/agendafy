@@ -1,6 +1,14 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
+
+/*
+Esta interfaz define la estructura de un documento
+de reunión en la base de datos.
+Incluye campos como título, organización, hora de inicio y fin, archivos adjuntos,
+convocados, lugar, tipo de reunión, modalidad, agenda y puntos.
+*/
 
 export interface IReunion extends Document {
+  _id: string; // Manually set by the client
   titulo: string;
   organizacion: string;
   hora_inicio: Date;
@@ -10,9 +18,17 @@ export interface IReunion extends Document {
   lugar: string;
   tipo_reunion: 'Extraordinaria' | 'Ordinaria';
   modalidad: 'Presencial' | 'Virtual';
+  agenda: string; // Solo el título de la agenda
+  puntos: Types.ObjectId[]; // Lista de referencias a puntos
 }
 
+/*
+ReunionSchema define el esquema de Mongoose para el modelo Reunion.
+Incluye los campos requeridos y sus tipos de datos.
+*/
+
 const ReunionSchema = new Schema<IReunion>({
+  _id: { type: String, required: true },
   titulo: { type: String, required: true },
   organizacion: { type: String, required: true },
   hora_inicio: { type: Date, required: true },
@@ -30,6 +46,14 @@ const ReunionSchema = new Schema<IReunion>({
     enum: ['Presencial', 'Virtual'],
     required: true,
   },
+  agenda: { type: String, required: true },
+  puntos: [{ type: Schema.Types.ObjectId, ref: 'Punto', default: [] }], 
 });
 
-export const ReunionModel = mongoose.models.Reunion || mongoose.model<IReunion>('Reuniones', ReunionSchema);
+/*
+ReunionModel es el modelo de Mongoose que se utiliza
+para interactuar con la colección 'Reuniones' en la base de datos.
+*/
+
+export const ReunionModel =
+  mongoose.models.Reunion || mongoose.model<IReunion>('Reuniones', ReunionSchema);

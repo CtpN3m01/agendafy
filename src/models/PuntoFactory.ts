@@ -1,6 +1,6 @@
 import { PuntoAprobacionModel } from '@/models/PuntoAprobacion';
 import { PuntoDeFondoModel } from '@/models/PuntoDeFondo';
-import { TipoPunto } from './Punto';
+import { TipoPunto } from '@/models/Punto';
 
 /*
 Esta interfaz define la estructura de los datos necesarios
@@ -9,12 +9,14 @@ para crear un punto en una agenda.
 
 interface PuntoData {
   titulo: string;
-  descripcion: string;
+  comentarios: string;
   duracion: number;
   tipo: TipoPunto;
   votosAFavor?: number;
   votosEnContra?: number;
   decisiones?: string[];
+  expositor: string;    
+  archivos?: string[];
 }
 
 /*
