@@ -1,4 +1,3 @@
-// src/types/PersonaDTO.ts
 export interface PersonaDTO {
   nombre: string;
   apellidos: string;

@@ -1,4 +1,3 @@
-// src/types/UsuarioDTO.ts
 export interface UsuarioDTO {
   nombreUsuario: string;
   contrasena: string;
