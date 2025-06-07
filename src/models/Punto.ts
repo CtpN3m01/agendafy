@@ -7,11 +7,14 @@ export enum TipoPunto {
 
 export interface IPunto extends Document {
   titulo: string;
-  tipo: TipoPunto;
+  comentarios: string; // <-- Cambiado de descripcion a comentarios
   duracion: number;
-  comentarios: string;
+  tipo: TipoPunto;
+  votosAFavor?: number;
+  votosEnContra?: number;
+  decisiones?: string[];
   expositor: string;
-  archivos: string[];
+  archivos?: string[];
 }
 
 export const PuntoSchema = new Schema<IPunto>({
