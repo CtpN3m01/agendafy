@@ -1,5 +1,7 @@
 import { CrearPuntoDTO } from '@/types/PuntoDTO';
 import { PuntoFactory } from '@/models/PuntoFactory';
+import { PuntoModel } from '@/models/Punto';
+import mongoose from 'mongoose';
 
 export class PuntoService {
     async crearPunto(puntoData: CrearPuntoDTO) {
@@ -15,4 +17,16 @@ export class PuntoService {
             decisiones: puntoData.decisiones
         });
     }
+
+    async obtenerPunto(id: string) {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            throw new Error(`El ID proporcionado no es válido: ${id}`);
+        }
+        const punto = await PuntoModel.findById(id);
+        if (!punto) {
+            throw new Error(`No se encontró un punto con el ID: ${id}`);
+        }
+        return punto;
+    }
+
 }
