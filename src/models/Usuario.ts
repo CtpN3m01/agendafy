@@ -11,6 +11,11 @@ export interface IUsuario extends Document {
   apellidos: string;
   correo: string;
   contrasena: string;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -26,6 +31,11 @@ const UsuarioSchema = new Schema<IUsuario>({
   apellidos: { type: String, required: true },
   correo: { type: String, required: true, unique: true },
   contrasena: { type: String, required: true },
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date },
+  isActive: { type: Boolean, default: true },
+}, {
+  timestamps: true
 });
 
 /*

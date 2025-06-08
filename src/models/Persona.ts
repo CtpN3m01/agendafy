@@ -3,6 +3,8 @@ import mongoose, { Schema, Document } from 'mongoose';
 /*
 La interfaz IPersona define la estructura de un documento de persona.
 Cada persona tiene un nombre, apellidos, correo electrónico y un rol en la organización.
+Además, tiene un campo de referencia a la organización a la que pertenece,
+y campos para indicar si está activa, así como las fechas de creación y actualización.
 */
 
 export interface IPersona extends Document {
@@ -10,6 +12,10 @@ export interface IPersona extends Document {
   apellidos: string;
   correo: string;
   rol: 'Presidente' | 'SubPresidente' | 'Tesorero' | 'Vocal';
+  organizacion: mongoose.Types.ObjectId;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -28,7 +34,11 @@ export const PersonaSchema = new Schema<IPersona>({
     type: String,
     enum: ['Presidente', 'SubPresidente', 'Tesorero', 'Vocal'],
     required: true,
-  }
+  },
+  organizacion: { type: Schema.Types.ObjectId, ref: 'Organizacion', required: true },
+  isActive: { type: Boolean, default: true }
+}, {
+  timestamps: true
 });
 
 /*

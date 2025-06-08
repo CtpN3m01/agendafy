@@ -11,4 +11,9 @@ export interface crearUsuarioDTO {
   apellidos: string;
   correo: string;
   contrasena: string;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }

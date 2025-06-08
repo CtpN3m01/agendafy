@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+
 /*
 DTO define la forma de los datos que se transferirán entre capas 
 (p. ej., del backend al frontend). No está vinculado al modelo de 
@@ -10,4 +12,8 @@ export interface crearPersonaDTO {
   apellidos: string;
   correo: string;
   rol: 'Presidente' | 'SubPresidente' | 'Tesorero' | 'Vocal';
+  organizacion: mongoose.Types.ObjectId;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
