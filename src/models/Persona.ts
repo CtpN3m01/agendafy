@@ -12,7 +12,8 @@ export interface IPersona extends Document {
   apellidos: string;
   correo: string;
   rol: 'Presidente' | 'SubPresidente' | 'Tesorero' | 'Vocal';
-  organizacion: mongoose.Types.ObjectId;
+  organizacion: mongoose.Types.ObjectId; // Referencia a la organización
+  usuario?: mongoose.Types.ObjectId; // Opcional: referencia al usuario si es miembro registrado
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -36,6 +37,7 @@ export const PersonaSchema = new Schema<IPersona>({
     required: true,
   },
   organizacion: { type: Schema.Types.ObjectId, ref: 'Organizacion', required: true },
+  usuario: { type: Schema.Types.ObjectId, ref: 'Usuario' }, // Nueva referencia opcional
   isActive: { type: Boolean, default: true }
 }, {
   timestamps: true
