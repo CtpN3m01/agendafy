@@ -20,8 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             !reunionData.lugar || 
             !reunionData.tipo_reunion || 
             !reunionData.modalidad ||
-            !reunionData.agenda ||
-            !reunionData.puntos
+            !reunionData.agenda
         ) {
             return res.status(400).json({ message: 'Datos incompletos' });
         }
