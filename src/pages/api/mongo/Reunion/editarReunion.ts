@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { connectToDatabase } from '@/lib/mongodb';
-import { ReunionModel } from '@/models/Reunion';
+import { ReunionService } from '@/services/ReunionService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PUT') {
@@ -9,13 +9,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     await connectToDatabase();
+    const reunionService = new ReunionService();
     const { id, ...updateData } = req.body;
 
     if (!id) {
       return res.status(400).json({ message: 'ID requerido' });
     }
 
-    const updated = await ReunionModel.findByIdAndUpdate(id, updateData, { new: true });
+    const updated = await reunionService.editarReunion(id, updateData);
 
     if (!updated) {
       return res.status(404).json({ message: 'Reunión no encontrada' });

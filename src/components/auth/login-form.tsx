@@ -45,8 +45,8 @@ export function LoginForm({ onLogin, onForgotPassword, onRegister }: LoginFormPr
     }
   };
 
-  return (
-    <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+  return (    
+    <div className="bg-white rounded-lg shadow-md p-6">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Iniciar Sesión</h2>
         <p className="text-gray-600">Accede a tu cuenta de Agendafy</p>

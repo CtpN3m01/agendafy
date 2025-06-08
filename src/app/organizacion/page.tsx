@@ -1,12 +1,15 @@
 "use client";
 
 import { AppLayout } from "@/components/layout";
+import { ProtectedRoute } from "@/components/auth";
 import { OrganizationInfo } from "@/components/organizacion";
 
 export default function OrganizacionPage() {
   return (
-    <AppLayout>
-      <OrganizationInfo />
-    </AppLayout>
+    <ProtectedRoute>
+      <AppLayout>
+        <OrganizationInfo />
+      </AppLayout>
+    </ProtectedRoute>
   );
 }

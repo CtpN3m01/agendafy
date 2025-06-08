@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Sidebar,
   SidebarContent,
@@ -30,6 +31,7 @@ interface AppLayoutProps {
 }
 
 function AppSidebar({ config, onLogout }: { config: SidebarConfig; onLogout?: () => void }) {
+  const { user, isLoading } = useAuth();
   const LogoIcon = config.logo;
 
   return (
@@ -76,25 +78,28 @@ function AppSidebar({ config, onLogout }: { config: SidebarConfig; onLogout?: ()
             </SidebarGroup>
           </React.Fragment>
         ))}
-      </SidebarContent>
-
-      <SidebarFooter>
+      </SidebarContent>      <SidebarFooter>
         <SidebarMenu>
-          {config.user && (
+          {!isLoading && (user || config.user) && (
             <SidebarMenuItem>
               <div className="flex items-center gap-2 px-2 py-1.5">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    {config.user.initials || config.user.name.slice(0, 2).toUpperCase()}
+                    {user ? 
+                      `${user.nombre?.charAt(0) || ''}${user.apellidos?.charAt(0) || ''}`.toUpperCase() ||
+                      user.nombreUsuario?.slice(0, 2).toUpperCase() || 'U'
+                      : 
+                      config.user?.initials || config.user?.name.slice(0, 2).toUpperCase()
+                    }
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left text-sm">
-                  <div className="font-medium">{config.user.name}</div>
-                  {config.user.email && (
-                    <div className="text-xs text-muted-foreground">
-                      {config.user.email}
-                    </div>
-                  )}
+                  <div className="font-medium">
+                    {user ? `${user.nombre} ${user.apellidos}` : config.user?.name}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {user ? user.correo : config.user?.email}
+                  </div>
                 </div>
               </div>
             </SidebarMenuItem>
@@ -115,10 +120,12 @@ function AppSidebar({ config, onLogout }: { config: SidebarConfig; onLogout?: ()
 
 export function AppLayout({ children, sidebarConfig, onLogout }: AppLayoutProps) {
   const config = sidebarConfig || defaultSidebarConfig;
+  const { logout, user } = useAuth();
 
   const handleLogout = () => {
     console.log("Cerrando sesión...");
     onLogout?.();
+    logout();
   };
 
   return (

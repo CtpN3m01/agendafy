@@ -1,7 +1,7 @@
 // src/app/auth/reset-password/page.tsx
 "use client";
 
-import { AppLayout } from "@/components/layout";
+import { AuthLayout } from "@/components/layout";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import { ResetPasswordData, AuthResponse } from "@/types";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -65,33 +65,30 @@ function ResetPasswordContent() {
   const handleBackToLogin = () => {
     router.push('/auth/login');
   };
-
   if (!token) {
     return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Token inválido</h1>
-            <p className="text-gray-600 mb-4">El enlace de recuperación no es válido o ha expirado.</p>
-            <button 
-              onClick={handleBackToLogin}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              Volver al Login
-            </button>
-          </div>
+      <AuthLayout>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Token inválido</h1>
+          <p className="text-gray-600 mb-4">El enlace de recuperación no es válido o ha expirado.</p>
+          <button 
+            onClick={handleBackToLogin}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Volver al Login
+          </button>
         </div>
-      </AppLayout>
+      </AuthLayout>
     );
   }
 
   return (
-    <AppLayout>
+    <AuthLayout>
       <ResetPasswordForm 
         onResetPassword={handleResetPassword} 
         onBackToLogin={handleBackToLogin} 
       />
-    </AppLayout>
+    </AuthLayout>
   );
 }
 

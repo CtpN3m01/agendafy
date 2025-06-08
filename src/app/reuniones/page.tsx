@@ -2,6 +2,7 @@
 
 import { AppLayout } from "@/components/layout";
 import { MeetingList } from "@/components/reuniones";
+import { ProtectedRoute } from "@/components/auth";
 
 export default function ReunionesPage() {
   const handleCreateMeeting = () => {
@@ -13,13 +14,14 @@ export default function ReunionesPage() {
     console.log("Unirse a reunión:", meetingId);
     // Aquí puedes redirigir a la sala de reunión
   };
-
   return (
-    <AppLayout>
-      <MeetingList 
-        onCreateMeeting={handleCreateMeeting}
-        onJoinMeeting={handleJoinMeeting}
-      />
-    </AppLayout>
+    <ProtectedRoute>
+      <AppLayout>
+        <MeetingList 
+          onCreateMeeting={handleCreateMeeting}
+          onJoinMeeting={handleJoinMeeting}
+        />
+      </AppLayout>
+    </ProtectedRoute>
   );
 }

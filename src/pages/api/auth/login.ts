@@ -1,11 +1,7 @@
 // src/pages/api/auth/login.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { connectToDatabase } from '@/lib/mongodb';
-import { UsuarioModel } from '@/models/Usuario';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'tu-secreto-super-seguro-para-jwt-2025';
+import { AuthService } from '@/services/AuthService';
+import { UsuarioDTO } from '@/types/UsuarioDTO';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -13,12 +9,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    await connectToDatabase();
+    const authService = new AuthService();
     
     const { email, password, nombreUsuario, contrasena } = req.body;
 
     // Manejar ambos formatos (frontend y Postman)
-    const loginData = {
+    const loginData: UsuarioDTO = {
       nombreUsuario: nombreUsuario || email,
       contrasena: contrasena || password
     };
@@ -33,65 +29,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // Buscar usuario por nombre de usuario o correo
-    let usuario = await UsuarioModel.findOne({ 
-      nombre_usuario: loginData.nombreUsuario,
-      isActive: true 
-    });
-    
-    if (!usuario) {
-      usuario = await UsuarioModel.findOne({ 
-        correo: loginData.nombreUsuario,
-        isActive: true 
-      });
+    // Usar el servicio de autenticación para iniciar sesión
+    const result = await authService.iniciarSesion(loginData);
+
+    if (result.success) {
+      return res.status(200).json(result);
+    } else {
+      return res.status(401).json(result);
     }
-
-    if (!usuario) {
-      return res.status(401).json({
-        success: false,
-        message: 'Credenciales incorrectas',
-        errors: { general: ['Usuario o contraseña incorrectos'] }
-      });
-    }
-
-    // Verificar contraseña
-    const passwordValida = await bcrypt.compare(loginData.contrasena, usuario.contrasena);
-    if (!passwordValida) {
-      return res.status(401).json({
-        success: false,
-        message: 'Credenciales incorrectas',
-        errors: { general: ['Usuario o contraseña incorrectos'] }
-      });
-    }
-
-    // Generar token
-    const token = jwt.sign({
-      userId: usuario._id.toString(),
-      email: usuario.correo,
-      nombreUsuario: usuario.nombre_usuario
-    }, JWT_SECRET, { expiresIn: '7d' });
-
-    const userResponse = {
-      id: usuario._id.toString(),
-      nombreUsuario: usuario.nombre_usuario,
-      nombre: usuario.nombre,
-      apellidos: usuario.apellidos,
-      correo: usuario.correo,
-      createdAt: usuario.createdAt
-    };
-
-    return res.status(200).json({
-      success: true,
-      message: 'Inicio de sesión exitoso',
-      token,
-      user: userResponse
-    });
 
   } catch (error) {
-    console.error('Error en login:', error);
+    console.error('Error completo en login:', error);
     return res.status(500).json({
       success: false,
-      message: 'Error interno del servidor'
+      message: 'Error interno del servidor',
+      error: error instanceof Error ? error.message : 'Error desconocido'
     });
   }
 }
