@@ -7,13 +7,18 @@ base de datos y, por lo general, solo incluye los datos que necesita
 el consumidor.
 */
 
-export interface crearPersonaDTO {
+export interface PersonaDTO {
   nombre: string;
   apellidos: string;
   correo: string;
   rol: 'Presidente' | 'SubPresidente' | 'Tesorero' | 'Vocal';
-  organizacion: mongoose.Types.ObjectId;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  organizacion: string;
+}
+
+export interface CrearPersonaDTO {
+  nombre: string;
+  apellidos: string;
+  correo: string;
+  rol: 'Presidente' | 'SubPresidente' | 'Tesorero' | 'Vocal';
+  organizacion: string;
 }
