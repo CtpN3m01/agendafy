@@ -10,7 +10,19 @@ export class ReunionDAO {
     return reunion.save();
   }
 
-  async findAll(): Promise<IReunion[]> {
+  async findAll() {
     return ReunionModel.find().exec();
+  }
+
+  async findByOrganizacion(organizacionId: string) {
+    return ReunionModel.find({ organizacion: organizacionId }).exec();
+  }
+
+  async deleteById(id: string) {
+    return ReunionModel.findByIdAndDelete(id);
+  }
+
+  async updateById(id: string, updateData: Partial<IReunion>) {
+    return ReunionModel.findByIdAndUpdate(id, updateData, { new: true });
   }
 }
