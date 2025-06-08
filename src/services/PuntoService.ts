@@ -1,9 +1,16 @@
-import { CrearPuntoDTO } from '@/types/PuntoDTO';
+import { PuntoDAOImpl, IPuntoDAO } from '@/dao/PuntoDAO';
+import { CrearPuntoDTO, PuntoResponseDTO } from '@/types/PuntoDTO';
 import { PuntoFactory } from '@/models/PuntoFactory';
 import { PuntoModel } from '@/models/Punto';
-import mongoose from 'mongoose';
 
 export class PuntoService {
+
+    private puntoDAO: IPuntoDAO;
+    
+    constructor() {
+        this.puntoDAO = new PuntoDAOImpl();
+    }
+
     async crearPunto(puntoData: CrearPuntoDTO) {
         if (!puntoData.titulo || !puntoData.tipo || !puntoData.duracion || !puntoData.expositor) {
             throw new Error('Datos incompletos para crear el punto.');
@@ -18,15 +25,8 @@ export class PuntoService {
         });
     }
 
-    async obtenerPunto(id: string) {
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            throw new Error(`El ID proporcionado no es válido: ${id}`);
-        }
-        const punto = await PuntoModel.findById(id);
-        if (!punto) {
-            throw new Error(`No se encontró un punto con el ID: ${id}`);
-        }
-        return punto;
+    async obtenerPunto(id: string): Promise<PuntoResponseDTO | null> {
+        return await this.puntoDAO.buscarPorId(id);
     }
 
 }

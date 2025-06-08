@@ -20,3 +20,18 @@ export interface CrearPuntoDTO {
   // Para Fondo
   decisiones?: string[];
 }
+
+export interface PuntoResponseDTO {
+  id: string;
+  titulo: string;
+  tipo: TipoPunto;
+  duracion: number;
+  comentarios?: string;
+  expositor: string;
+  archivos?: string[];
+  // Para Aprobacion
+  votosAFavor?: number;
+  votosEnContra?: number;
+  // Para Fondo
+  decisiones?: string[];
+}
