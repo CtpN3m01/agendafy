@@ -1,5 +1,11 @@
-// DTO defines the shape of data that will be transferred between layers (e.g., from the backend to the frontend). 
-// It’s not tied to the database model, and usually only includes the data needed by the consumer.
+import { ObjectId } from 'mongodb'; // Importa ObjectId de MongoDB
+
+/*
+DTO define la forma de los datos que se transferirán entre capas 
+(p. ej., del backend al frontend). No está vinculado al modelo de 
+base de datos y, por lo general, solo incluye los datos que necesita 
+el consumidor.
+*/
 
 // If you are using MongoDB, import ObjectId from 'mongodb' or define it as a type alias if needed.
 import { ObjectId } from 'mongodb';
