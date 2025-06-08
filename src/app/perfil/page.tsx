@@ -2,6 +2,7 @@
 
 import { AppLayout } from "@/components/layout";
 import { ProfileInfo } from "@/components/perfil";
+import { ProtectedRoute } from "@/components/auth";
 
 import { UserProfile } from "@/types";
 
@@ -41,8 +42,10 @@ export default function PerfilPage() {
   };
 
   return (
-    <AppLayout>
-      <ProfileInfo user={defaultUser} onUpdate={handleUpdate} />
-    </AppLayout>
+    <ProtectedRoute>
+      <AppLayout>
+        <ProfileInfo user={defaultUser} onUpdate={handleUpdate} />
+      </AppLayout>
+    </ProtectedRoute>
   );
 }

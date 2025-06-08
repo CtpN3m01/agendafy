@@ -1,7 +1,7 @@
 // src/app/auth/forgot-password/page.tsx
 "use client";
 
-import { AppLayout } from "@/components/layout";
+import { AuthLayout } from "@/components/layout";
 import { RecoveryForm } from "@/components/auth/recovery-form";
 import { RecoveryData, AuthResponse } from "@/types";
 import { useRouter } from "next/navigation";
@@ -39,10 +39,9 @@ export default function ForgotPasswordPage() {
   const handleBackToLogin = () => {
     router.push('/auth/login');
   };
-
   return (
-    <AppLayout>
+    <AuthLayout>
       <RecoveryForm onRecovery={handleRecovery} onBackToLogin={handleBackToLogin} />
-    </AppLayout>
+    </AuthLayout>
   );
 }

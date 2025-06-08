@@ -1,6 +1,7 @@
 "use client";
 
 import { AppLayout } from "@/components/layout";
+import { ProtectedRoute } from "@/components/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,8 @@ import {
 
 export default function ConfiguracionPage() {
   return (
-    <AppLayout>
+    <ProtectedRoute>
+      <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -244,10 +246,10 @@ export default function ConfiguracionPage() {
                 <Badge variant="secondary" className="mb-2">12ms</Badge>
                 <div className="text-sm text-muted-foreground">Latencia</div>
               </div>
-            </div>
-          </CardContent>
+            </div>          </CardContent>
         </Card>
       </div>
     </AppLayout>
+    </ProtectedRoute>
   );
 }

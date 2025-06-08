@@ -1,6 +1,7 @@
 "use client";
 
 import { AppLayout } from "@/components/layout";
+import { ProtectedRoute } from "@/components/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -125,9 +126,9 @@ export default function NotificacionesPage() {
   };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
-
   return (
-    <AppLayout>
+    <ProtectedRoute>
+      <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -270,11 +271,11 @@ export default function NotificacionesPage() {
               <Button variant="outline">
                 <Settings className="h-4 w-4 mr-2" />
                 Configurar Notificaciones
-              </Button>
-            </CardContent>
+              </Button>            </CardContent>
           </Card>
         )}
       </div>
     </AppLayout>
+    </ProtectedRoute>
   );
 }

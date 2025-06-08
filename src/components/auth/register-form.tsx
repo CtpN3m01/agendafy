@@ -2,47 +2,70 @@
 "use client";
 
 import { useState } from "react";
-import { RegisterData, AuthResponse } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
 
-interface RegisterFormProps {
-  onRegister: (data: RegisterData) => Promise<AuthResponse>;
-  onLogin: () => void;
+interface RegisterData {
+  nombreUsuario: string;
+  nombre: string;
+  apellidos: string;
+  correo: string;
+  contrasena: string;
+  confirmPassword: string;
+  acceptTerms: boolean;
 }
 
-export function RegisterForm({ onRegister, onLogin }: RegisterFormProps) {
+export function RegisterForm() {
+  const { login } = useAuth();
+  const router = useRouter();
+  
   const [formData, setFormData] = useState<RegisterData>({
-    name: "",
-    email: "",
-    password: "",
+    nombreUsuario: "",
+    nombre: "",
+    apellidos: "",
+    correo: "",
+    contrasena: "",
     confirmPassword: "",
     acceptTerms: false,
-    organizationCode: "",
   });
+  
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
-
   const validateForm = (): boolean => {
     const newErrors: Record<string, string[]> = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = ["El nombre es requerido"];
+    if (!formData.nombreUsuario.trim()) {
+      newErrors.nombreUsuario = ["El nombre de usuario es requerido"];
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = ["El email es requerido"];
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = ["El email no es válido"];
+    if (!formData.nombre.trim()) {
+      newErrors.nombre = ["El nombre es requerido"];
     }
 
-    if (!formData.password) {
-      newErrors.password = ["La contraseña es requerida"];
-    } else if (formData.password.length < 8) {
-      newErrors.password = ["La contraseña debe tener al menos 8 caracteres"];
+    if (!formData.apellidos.trim()) {
+      newErrors.apellidos = ["Los apellidos son requeridos"];
     }
 
-    if (formData.password !== formData.confirmPassword) {
+    if (!formData.correo.trim()) {
+      newErrors.correo = ["El correo es requerido"];
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo)) {
+      newErrors.correo = ["El correo no es válido"];
+    }
+
+    if (!formData.contrasena) {
+      newErrors.contrasena = ["La contraseña es requerida"];
+    } else if (formData.contrasena.length < 8) {
+      newErrors.contrasena = ["La contraseña debe tener al menos 8 caracteres"];
+    }
+
+    if (formData.contrasena !== formData.confirmPassword) {
       newErrors.confirmPassword = ["Las contraseñas no coinciden"];
     }
 
@@ -53,7 +76,6 @@ export function RegisterForm({ onRegister, onLogin }: RegisterFormProps) {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -65,9 +87,28 @@ export function RegisterForm({ onRegister, onLogin }: RegisterFormProps) {
     setErrors({});
 
     try {
-      const response = await onRegister(formData);
-      if (!response.success) {
-        setErrors(response.errors || {});
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nombreUsuario: formData.nombreUsuario,
+          nombre: formData.nombre,
+          apellidos: formData.apellidos,
+          correo: formData.correo,
+          contrasena: formData.contrasena,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Iniciar sesión automáticamente después del registro
+        login(data.token, data.user);
+        router.push('/reuniones');
+      } else {
+        setErrors(data.errors || { general: [data.message || 'Error en el registro'] });
       }
     } catch (error) {
       setErrors({ general: ["Error de conexión. Por favor, intenta nuevamente."] });
@@ -95,88 +136,106 @@ export function RegisterForm({ onRegister, onLogin }: RegisterFormProps) {
         <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
           {errors.general[0]}
         </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
+      )}      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-            Nombre Completo
-          </label>
-          <input
+          <Label htmlFor="nombreUsuario">Nombre de Usuario</Label>
+          <Input
             type="text"
-            id="name"
-            value={formData.name}
-            onChange={(e) => handleInputChange('name', e.target.value)}
+            id="nombreUsuario"
+            value={formData.nombreUsuario}
+            onChange={(e) => handleInputChange('nombreUsuario', e.target.value)}
             required
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1"
           />
-          {errors.name && (
-            <p className="text-red-500 text-sm mt-1">{errors.name[0]}</p>
+          {errors.nombreUsuario && (
+            <p className="text-red-500 text-sm mt-1">{errors.nombreUsuario[0]}</p>
           )}
         </div>
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Email
-          </label>
-          <input
+          <Label htmlFor="nombre">Nombre</Label>
+          <Input
+            type="text"
+            id="nombre"
+            value={formData.nombre}
+            onChange={(e) => handleInputChange('nombre', e.target.value)}
+            required
+            className="mt-1"
+          />
+          {errors.nombre && (
+            <p className="text-red-500 text-sm mt-1">{errors.nombre[0]}</p>
+          )}
+        </div>
+
+        <div>
+          <Label htmlFor="apellidos">Apellidos</Label>
+          <Input
+            type="text"
+            id="apellidos"
+            value={formData.apellidos}
+            onChange={(e) => handleInputChange('apellidos', e.target.value)}
+            required
+            className="mt-1"
+          />
+          {errors.apellidos && (
+            <p className="text-red-500 text-sm mt-1">{errors.apellidos[0]}</p>
+          )}
+        </div>
+
+        <div>
+          <Label htmlFor="correo">Correo Electrónico</Label>
+          <Input
             type="email"
-            id="email"
-            value={formData.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
+            id="correo"
+            value={formData.correo}
+            onChange={(e) => handleInputChange('correo', e.target.value)}
             required
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1"
           />
-          {errors.email && (
-            <p className="text-red-500 text-sm mt-1">{errors.email[0]}</p>
+          {errors.correo && (
+            <p className="text-red-500 text-sm mt-1">{errors.correo[0]}</p>
           )}
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-            Contraseña
-          </label>
+          <Label htmlFor="contrasena">Contraseña</Label>
           <div className="relative">
-            <input
+            <Input
               type={showPassword ? "text" : "password"}
-              id="password"
-              value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
+              id="contrasena"
+              value={formData.contrasena}
+              onChange={(e) => handleInputChange('contrasena', e.target.value)}
               required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 pr-10"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
             >
-              {showPassword ? "Ocultar" : "Mostrar"}
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-          {errors.password && (
-            <p className="text-red-500 text-sm mt-1">{errors.password[0]}</p>
+          {errors.contrasena && (
+            <p className="text-red-500 text-sm mt-1">{errors.contrasena[0]}</p>
           )}
-        </div>
-
-        <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-            Confirmar Contraseña
-          </label>
+        </div>        <div>
+          <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
           <div className="relative">
-            <input
+            <Input
               type={showConfirmPassword ? "text" : "password"}
               id="confirmPassword"
               value={formData.confirmPassword}
               onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
               required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 pr-10"
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
             >
-              {showConfirmPassword ? "Ocultar" : "Mostrar"}
+              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
           {errors.confirmPassword && (
@@ -184,37 +243,34 @@ export function RegisterForm({ onRegister, onLogin }: RegisterFormProps) {
           )}
         </div>
 
-        <div>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={formData.acceptTerms}
-              onChange={(e) => handleInputChange('acceptTerms', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <span className="ml-2 text-sm text-gray-600">
-              Acepto los términos y condiciones
-            </span>
-          </label>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="acceptTerms"
+            checked={formData.acceptTerms}
+            onCheckedChange={(checked) => handleInputChange('acceptTerms', checked as boolean)}
+          />
+          <Label htmlFor="acceptTerms" className="text-sm">
+            Acepto los términos y condiciones
+          </Label>
           {errors.acceptTerms && (
             <p className="text-red-500 text-sm mt-1">{errors.acceptTerms[0]}</p>
           )}
         </div>
 
-        <button
+        <Button
           type="submit"
           disabled={isLoading}
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+          className="w-full"
         >
           {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
-        </button>
+        </Button>
 
         <div className="text-center">
-          <span className="text-sm text-gray-600">¿Ya tienes cuenta? </span>
+          <span className="text-sm text-muted-foreground">¿Ya tienes cuenta? </span>
           <button
             type="button"
-            onClick={onLogin}
-            className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+            onClick={() => router.push('/auth/login')}
+            className="text-sm text-primary hover:underline font-medium"
           >
             Inicia sesión aquí
           </button>

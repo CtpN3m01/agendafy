@@ -1,8 +1,6 @@
 // src/pages/api/auth/reset-password.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { connectToDatabase } from '@/lib/mongodb';
-import { UsuarioModel } from '@/models/Usuario';
-import bcrypt from 'bcryptjs';
+import { AuthService } from '@/services/AuthService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -10,67 +8,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    await connectToDatabase();
+    const authService = new AuthService();
     
     const body = req.body;
-    const { token, nuevaContrasena, confirmarContrasena } = body;
+    const { token, nuevaContrasena, confirmarContrasena, newPassword, confirmPassword } = body;
 
-    if (!token || !nuevaContrasena || !confirmarContrasena) {
+    // Manejar ambos formatos
+    const resetToken = token;
+    const password = nuevaContrasena || newPassword;
+    const confirmPass = confirmarContrasena || confirmPassword;
+
+    if (!resetToken || !password || !confirmPass) {
       return res.status(400).json({
         success: false,
         message: 'Datos incompletos'
       });
     }
 
-    if (nuevaContrasena !== confirmarContrasena) {
+    if (password !== confirmPass) {
       return res.status(400).json({
         success: false,
         message: 'Las contraseñas no coinciden'
       });
     }
 
-    if (nuevaContrasena.length < 8) {
+    if (password.length < 8) {
       return res.status(400).json({
         success: false,
         message: 'La contraseña debe tener al menos 8 caracteres'
       });
     }
 
-    // Buscar usuario con token válido
-    const usuario = await UsuarioModel.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: new Date() },
-      isActive: true
-    });
+    // Usar el servicio de autenticación para restablecer la contraseña
+    const result = await authService.restablecerContrasena(resetToken, password);
 
-    if (!usuario) {
-      return res.status(400).json({
-        success: false,
-        message: 'Token inválido o expirado'
-      });
+    if (result.success) {
+      return res.status(200).json(result);
+    } else {
+      return res.status(400).json(result);
     }
 
-    // Hashear nueva contraseña
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash(nuevaContrasena, salt);
-
-    // Actualizar contraseña y limpiar token
-    await UsuarioModel.findByIdAndUpdate(usuario._id, {
-      contrasena: hashedPassword,
-      resetPasswordToken: undefined,
-      resetPasswordExpires: undefined
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: 'Contraseña restablecida exitosamente'
-    });
-
   } catch (error) {
-    console.error('Error en reset password:', error);
+    console.error('Error en reset-password:', error);
     return res.status(500).json({
       success: false,
-      message: 'Error interno del servidor'
+      message: 'Error interno del servidor',
+      error: error instanceof Error ? error.message : 'Error desconocido'
     });
   }
 }
