@@ -10,9 +10,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     await connectToDatabase();
     const reunionService = new ReunionService();
-    const { id } = req.body;
+    const { id } = req.query;
 
-    if (!id) {
+    console.log('ID recibido para eliminar:', id);
+
+    if (!id || typeof id !== 'string') {
       return res.status(400).json({ message: 'ID requerido' });
     }
 

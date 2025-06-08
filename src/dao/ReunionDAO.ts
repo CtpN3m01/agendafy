@@ -19,6 +19,8 @@ export class ReunionDAO {
   }
 
   async deleteById(id: string) {
+    const doc = await ReunionModel.findById(id);
+    console.log('Documento encontrado:', doc);
     return ReunionModel.findByIdAndDelete(id);
   }
 
