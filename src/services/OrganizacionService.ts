@@ -1,14 +1,13 @@
 import { OrganizacionDAOImpl, IOrganizacionDAO } from '@/dao/OrganizacionDAO';
-import { UsuarioDAOImpl } from '@/dao/UsuarioDAO';
 import { CrearOrganizacionDTO, OrganizacionResponseDTO, ActualizarOrganizacionDTO } from '@/types/OrganizacionDTO';
+import { UsuarioModel } from '@/models/Usuario';
+import { connectToDatabase } from '@/lib/mongodb';
 
 export class OrganizacionService {
   private organizacionDAO: IOrganizacionDAO;
-  private usuarioDAO: UsuarioDAOImpl;
 
   constructor() {
     this.organizacionDAO = new OrganizacionDAOImpl();
-    this.usuarioDAO = new UsuarioDAOImpl();
   }
 
   async crearOrganizacion(organizacionData: CrearOrganizacionDTO): Promise<{
@@ -18,8 +17,10 @@ export class OrganizacionService {
     errors?: Record<string, string[]>;
   }> {
     try {
+      await connectToDatabase();
+      
       // Validar que el usuario existe
-      const usuario = await this.usuarioDAO.buscarPorId(organizacionData.usuarioId);
+      const usuario = await UsuarioModel.findById(organizacionData.usuarioId).exec();
       if (!usuario) {
         return {
           success: false,
@@ -57,7 +58,26 @@ export class OrganizacionService {
         organizacion: nuevaOrganizacion
       };
     } catch (error) {
-      console.error('Error en creación de organización:', error);
+      console.error('Error detallado en creación de organización:', error);
+      
+      // Manejar errores específicos de MongoDB
+      if (error instanceof Error) {
+        if (error.message.includes('duplicate key')) {
+          return {
+            success: false,
+            message: 'Ya existe una organización con esos datos',
+            errors: { general: ['Nombre o correo ya en uso'] }
+          };
+        }
+        if (error.message.includes('validation failed')) {
+          return {
+            success: false,
+            message: 'Datos de entrada inválidos',
+            errors: { general: ['Revisa los datos ingresados'] }
+          };
+        }
+      }
+      
       return {
         success: false,
         message: 'Error interno del servidor',

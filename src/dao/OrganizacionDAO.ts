@@ -1,4 +1,8 @@
 import { OrganizacionModel, IOrganizacion } from '@/models/Organizacion';
+// Importar todos los modelos que se usarán en populate
+import '@/models/Usuario'; // Asegurar que el modelo Usuario esté registrado
+import '@/models/Persona'; // Asegurar que el modelo Persona esté registrado
+import '@/models/Reunion'; // Asegurar que el modelo Reunion esté registrado
 import { CrearOrganizacionDTO, OrganizacionResponseDTO, ActualizarOrganizacionDTO } from '@/types/OrganizacionDTO';
 import { connectToDatabase } from '@/lib/mongodb';
 
@@ -29,13 +33,13 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
     });
 
     const savedOrganizacion = await organizacion.save();
-    await savedOrganizacion.populate([
-      { path: 'usuario', select: 'nombre correo' },
-      { path: 'miembros', select: 'nombre apellidos correo rol' },
-      { path: 'reuniones', select: 'titulo hora_inicio' }
-    ]);
     
-    return this.mapearAResponse(savedOrganizacion);
+    // Populate solo después de guardar y solo los campos que existen
+    const populatedOrganizacion = await OrganizacionModel.findById(savedOrganizacion._id)
+      .populate('usuario', 'nombre correo')
+      .exec();
+    
+    return this.mapearAResponse(populatedOrganizacion);
   }
 
   async buscarPorId(id: string): Promise<OrganizacionResponseDTO | null> {
@@ -96,11 +100,9 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
 
   async eliminarOrganizacion(id: string): Promise<boolean> {
     await connectToDatabase();
-    const result = await OrganizacionModel.findByIdAndUpdate(
-      id, 
-      { isActive: false }, 
-      { new: true }
-    ).exec();
+    
+    // ELIMINACIÓN FÍSICA - borra completamente el registro
+    const result = await OrganizacionModel.findByIdAndDelete(id).exec();
     
     return !!result;
   }
@@ -138,9 +140,9 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
       direccion: organizacion.direccion,
       foto: organizacion.foto,
       usuario: {
-        id: organizacion.usuario._id?.toString() || organizacion.usuario,
-        nombre: organizacion.usuario.nombre || '',
-        correo: organizacion.usuario.correo || ''
+        id: organizacion.usuario?._id?.toString() || organizacion.usuario,
+        nombre: organizacion.usuario?.nombre || '',
+        correo: organizacion.usuario?.correo || ''
       },
       miembros: organizacion.miembros?.map((miembro: any) => ({
         id: miembro._id?.toString() || miembro,
