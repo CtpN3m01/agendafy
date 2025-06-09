@@ -22,6 +22,7 @@ interface AuthContextType {
   login: (token: string, user: User) => void;
   logout: () => void;
   checkAuth: () => boolean;
+  updateUser: (userData: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -85,8 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     setToken(newToken);
     setUser(newUser);
-  };
-  const logout = () => {
+  };  const logout = () => {
     if (!isMounted) return;
     
     localStorage.removeItem('authToken');
@@ -100,6 +100,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/auth/login');
   };
 
+  const updateUser = (userData: Partial<User>) => {
+    if (!isMounted || !user) return;
+    
+    const updatedUser = { ...user, ...userData };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  };
   const value: AuthContextType = {
     user,
     token,
@@ -108,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     checkAuth,
+    updateUser,
   };
 
   return (

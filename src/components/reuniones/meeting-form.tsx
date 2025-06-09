@@ -40,30 +40,12 @@ export function MeetingForm({ meeting, onSave, onCancel }: MeetingFormProps) {
     };
     onSave?.(meetingData);
   };
-
   // Datos de ejemplo para participantes sugeridos
   const suggestedAttendees: UserProfile[] = [
     {
       id: "1",
       name: "Ana García",
       email: "ana@example.com",
-      preferences: {
-        theme: "light",
-        language: "es",
-        timezone: "America/Mexico_City",
-        notifications: {
-          email: true,
-          push: true,
-          sms: false,
-          meetingReminders: true,
-          weeklyDigest: true
-        },
-        privacy: {
-          profileVisibility: "organization",
-          showOnlineStatus: true,
-          allowDirectMessages: true
-        }
-      },
       createdAt: new Date(),
       updatedAt: new Date()
     },
@@ -71,23 +53,6 @@ export function MeetingForm({ meeting, onSave, onCancel }: MeetingFormProps) {
       id: "2",
       name: "Carlos López",
       email: "carlos@example.com",
-      preferences: {
-        theme: "light",
-        language: "es",
-        timezone: "America/Mexico_City",
-        notifications: {
-          email: true,
-          push: true,
-          sms: false,
-          meetingReminders: true,
-          weeklyDigest: true
-        },
-        privacy: {
-          profileVisibility: "organization",
-          showOnlineStatus: true,
-          allowDirectMessages: true
-        }
-      },
       createdAt: new Date(),
       updatedAt: new Date()
     }

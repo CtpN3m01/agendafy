@@ -170,13 +170,15 @@ export class OrganizacionService {
     errors?: Record<string, string[]>;
   }> {
     try {
+      await connectToDatabase();
+      
       // Verificar que la organización existe y pertenece al usuario
       const organizacion = await this.organizacionDAO.buscarPorId(id);
       if (!organizacion) {
         return {
           success: false,
           message: 'Organización no encontrada',
-          errors: { general: ['La organización no existe'] }
+          errors: { general: ['La organización no existe o fue eliminada previamente'] }
         };
       }
 
@@ -184,11 +186,32 @@ export class OrganizacionService {
         return {
           success: false,
           message: 'No tienes permisos para eliminar esta organización',
-          errors: { general: ['Sin permisos'] }
+          errors: { general: ['Solo el propietario puede eliminar la organización'] }
+        };
+      }
+      
+      // Verificar si tiene reuniones activas
+      if (organizacion.reuniones && organizacion.reuniones.length > 0) {
+        console.log(`Organización ${id} tiene ${organizacion.reuniones.length} reuniones asociadas`);
+        // Podrías decidir si permitir eliminación o no
+      }
+
+      // Verificar si tiene miembros
+      if (organizacion.miembros && organizacion.miembros.length > 0) {
+        console.log(`Organización ${id} tiene ${organizacion.miembros.length} miembros asociados`);
+      }
+
+      const eliminada = await this.organizacionDAO.eliminarOrganizacion(id);
+
+      if (!eliminada) {
+        return {
+          success: false,
+          message: 'No se pudo eliminar la organización',
+          errors: { general: ['Error al procesar la eliminación'] }
         };
       }
 
-      await this.organizacionDAO.eliminarOrganizacion(id);
+      console.log(`Organización ${id} eliminada exitosamente por usuario ${userId}`);
 
       return {
         success: true,

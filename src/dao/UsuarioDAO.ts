@@ -16,6 +16,7 @@ export interface IUsuarioDAO {
   actualizarToken(id: string, token: string, expires: Date): Promise<void>;
   actualizarContrasena(id: string, nuevaContrasena: string): Promise<void>;
   buscarPorResetToken(token: string): Promise<IUsuario | null>;
+  actualizarPerfil(id: string, datos: Partial<IUsuario>): Promise<IUsuario | null>;
 }
 
 export class UsuarioDAOImpl implements IUsuarioDAO {
@@ -80,5 +81,24 @@ export class UsuarioDAOImpl implements IUsuarioDAO {
       resetPasswordToken: token,
       resetPasswordExpires: { $gt: new Date() }
     }).exec();
+  }
+  async actualizarPerfil(id: string, datos: Partial<IUsuario>): Promise<IUsuario | null> {
+    try {
+      console.log('DAO: actualizarPerfil - ID:', id);
+      console.log('DAO: actualizarPerfil - Datos:', datos);
+      
+      await connectToDatabase();
+      const resultado = await UsuarioModel.findByIdAndUpdate(
+        id, 
+        datos, 
+        { new: true, runValidators: true }
+      ).exec();
+      
+      console.log('DAO: actualizarPerfil - Resultado:', resultado ? 'exitoso' : 'falló');
+      return resultado;
+    } catch (error) {
+      console.error('DAO: Error en actualizarPerfil:', error);
+      throw error;
+    }
   }
 }

@@ -3,7 +3,7 @@ export interface OrganizacionDTO {
   correo: string;
   telefono: string;
   direccion: string;
-  foto?: string; // Base64 o URL
+  logo?: string; 
 }
 
 export interface CrearOrganizacionDTO {
@@ -11,8 +11,8 @@ export interface CrearOrganizacionDTO {
   correo: string;
   telefono: string;
   direccion: string;
-  foto?: string;
-  usuarioId: string; // ID del usuario que crea la organización
+  logo?: Buffer; 
+  usuarioId: string;
 }
 
 export interface OrganizacionResponseDTO {
@@ -21,7 +21,7 @@ export interface OrganizacionResponseDTO {
   correo: string;
   telefono: string;
   direccion: string;
-  foto?: string;
+  logo?: string; 
   miembros: Array<{
     id: string;
     nombre: string;
@@ -48,5 +48,5 @@ export interface ActualizarOrganizacionDTO {
   correo?: string;
   telefono?: string;
   direccion?: string;
-  foto?: string;
+  logo?: Buffer; 
 }
