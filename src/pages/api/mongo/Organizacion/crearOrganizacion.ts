@@ -68,11 +68,20 @@ export default async function handler(req: NextApiRequestWithFiles, res: NextApi
           correo: ['El formato del correo no es válido']
         }
       });
-    }
-
-    // Procesar el logo si existe
+    }    // Procesar el logo si existe
     let logoBuffer: Buffer | undefined;
     if (req.file) {
+      // Verificar tamaño del archivo (máximo 1MB)
+      if (req.file.size > 1024 * 1024) {
+        return res.status(400).json({
+          success: false,
+          message: 'El logo es demasiado grande',
+          errors: {
+            logo: ['El logo debe ser menor a 1MB']
+          }
+        });
+      }
+      
       logoBuffer = req.file.buffer;
       console.log(`Logo recibido: ${req.file.originalname}, tamaño: ${req.file.size} bytes, tipo: ${req.file.mimetype}`);
     }

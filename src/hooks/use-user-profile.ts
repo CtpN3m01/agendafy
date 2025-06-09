@@ -38,7 +38,8 @@ export function useUserProfile() {
 
     try {
       setLoading(true);
-      setError(null);      const response = await fetch('/api/user/profile', {
+      setError(null);      
+      const response = await fetch('/api/mongo/user/profile', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -53,7 +54,7 @@ export function useUserProfile() {
         setUserProfile(normalizedBasicProfile);
       }
     } catch (err) {
-      console.error('Error fetching user profile:', err);      // En caso de error, usar datos básicos del auth
+      console.error('Error fetching user profile:', err);
       if (authUser) {
         const basicProfile = mapAuthUserToProfile(authUser);
         const normalizedBasicProfile = normalizeProfileData(basicProfile);

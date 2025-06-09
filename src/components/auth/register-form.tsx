@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
+import { OrganizationForm } from "./organization-form";
 
 interface RegisterData {
   nombreUsuario: string;
@@ -24,6 +25,7 @@ export function RegisterForm() {
   const { login } = useAuth();
   const router = useRouter();
   
+  const [showOrganizationForm, setShowOrganizationForm] = useState(false);
   const [formData, setFormData] = useState<RegisterData>({
     nombreUsuario: "",
     nombre: "",
@@ -101,12 +103,11 @@ export function RegisterForm() {
         }),
       });
 
-      const data = await response.json();
-
-      if (data.success) {
+      const data = await response.json();      if (data.success) {
         // Iniciar sesión automáticamente después del registro
         login(data.token, data.user);
-        router.push('/reuniones');
+        // Mostrar formulario de organización
+        setShowOrganizationForm(true);
       } else {
         setErrors(data.errors || { general: [data.message || 'Error en el registro'] });
       }
@@ -122,8 +123,12 @@ export function RegisterForm() {
     // Limpiar errores del campo al escribir
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: [] }));
-    }
-  };
+    }  };
+
+  // Si el registro fue exitoso, mostrar formulario de organización
+  if (showOrganizationForm) {
+    return <OrganizationForm onComplete={() => router.push('/reuniones')} />;
+  }
 
   return (
     <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">

@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { UsuarioDAOImpl } from '../../../dao/UsuarioDAO';
+import { UsuarioDAOImpl } from '@/dao/UsuarioDAO';
 import jwt from 'jsonwebtoken';
-import { JWT_CONFIG } from '../../../lib/jwt-config';
+import { JWT_CONFIG } from '@/lib/jwt-config';
 
 const usuarioDAO = new UsuarioDAOImpl();
 

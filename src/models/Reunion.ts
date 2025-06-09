@@ -56,4 +56,4 @@ para interactuar con la colección 'Reuniones' en la base de datos.
 */
 
 export const ReunionModel =
-  mongoose.models.Reunion || mongoose.model<IReunion>('Reuniones', ReunionSchema);
+  mongoose.models.Reunion || mongoose.model<IReunion>('Reunion', ReunionSchema);

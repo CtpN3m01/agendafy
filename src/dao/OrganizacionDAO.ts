@@ -3,6 +3,7 @@ import { OrganizacionModel, IOrganizacion } from '@/models/Organizacion';
 import '@/models/Usuario'; // Asegurar que el modelo Usuario esté registrado
 import '@/models/Persona'; // Asegurar que el modelo Persona esté registrado
 import '@/models/Reunion'; // Asegurar que el modelo Reunion esté registrado
+import '@/models/Punto'; // Asegurar que el modelo Punto esté registrado
 import { CrearOrganizacionDTO, OrganizacionResponseDTO, ActualizarOrganizacionDTO } from '@/types/OrganizacionDTO';
 import { connectToDatabase } from '@/lib/mongodb';
 
@@ -107,7 +108,6 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   async eliminarOrganizacion(id: string): Promise<boolean> {
     await connectToDatabase();
     
-    // ELIMINACIÓN FÍSICA - borra completamente el registro
     const result = await OrganizacionModel.findByIdAndDelete(id).exec();
     
     return !!result;
@@ -135,16 +135,28 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
       organizacionId,
       { $addToSet: { reuniones: reunionId } }
     ).exec();
-  }
+  }  private mapearAResponse(organizacion: any): OrganizacionResponseDTO {
+    // Convertir logo a base64 solo si no es muy grande (máximo 500KB en base64)
+    let logoBase64: string | undefined;
+    if (organizacion.logo) {
+      const logoSize = organizacion.logo.length;
+      // Si el logo es menor a 500KB, convertir a base64
+      if (logoSize <= 500 * 1024) {
+        logoBase64 = `data:image/jpeg;base64,${organizacion.logo.toString('base64')}`;
+      } else {
+        console.warn(`Logo demasiado grande para conversión a base64: ${logoSize} bytes`);
+        // Usar endpoint de imagen para logos grandes
+        logoBase64 = `/api/mongo/Organizacion/logo?id=${organizacion._id}`;
+      }
+    }
 
-  private mapearAResponse(organizacion: any): OrganizacionResponseDTO {
     return {
       id: organizacion._id.toString(),
       nombre: organizacion.nombre,
       correo: organizacion.correo,
       telefono: organizacion.telefono,
       direccion: organizacion.direccion,
-      logo: organizacion.logo ? organizacion.logo.toString('base64') : undefined, 
+      logo: logoBase64,
       usuario: {
         id: organizacion.usuario?._id?.toString() || organizacion.usuario,
         nombre: organizacion.usuario?.nombre || '',
