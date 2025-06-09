@@ -19,7 +19,6 @@ export interface IReunion extends Document {
   tipo_reunion: 'Extraordinaria' | 'Ordinaria';
   modalidad: 'Presencial' | 'Virtual';
   agenda: string;
-  puntos: mongoose.Types.ObjectId[];
 }
 
 /*
@@ -47,7 +46,6 @@ const ReunionSchema = new Schema<IReunion>({
     required: true,
   },
   agenda: { type: String, required: true },
-  puntos: [{ type: Schema.Types.ObjectId, ref: 'Punto', default: [] }], 
 });
 
 /*

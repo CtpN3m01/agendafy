@@ -19,5 +19,4 @@ export interface CrearReunionDTO {
     tipo_reunion: 'Extraordinaria' | 'Ordinaria';
     modalidad: 'Presencial' | 'Virtual';
     agenda: string;
-    puntos: mongoose.Types.ObjectId[];
 }

@@ -1,5 +1,5 @@
 import { TipoPunto } from '@/models/Punto';
-
+import mongoose from 'mongoose';
 /*
 DTO define la forma de los datos que se transferirán entre capas 
 (p. ej., del backend al frontend). No está vinculado al modelo de 
@@ -14,6 +14,7 @@ export interface CrearPuntoDTO {
   comentarios?: string;
   expositor: string;
   archivos?: string[];
+  idReunion: mongoose.Types.ObjectId; // ID de la reunión a la que pertenece el punto
   // Para Aprobacion
   votosAFavor?: number;
   votosEnContra?: number;

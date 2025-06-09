@@ -26,6 +26,7 @@ export interface IPunto extends Document {
   decisiones?: string[];
   expositor: string;
   archivos?: string[];
+  idReunion: mongoose.Types.ObjectId; 
 }
 
 /*
@@ -44,6 +45,7 @@ export const PuntoSchema = new Schema<IPunto>({
   comentarios: { type: String, default: '' },
   expositor: { type: String, required: true },
   archivos: { type: [String], default: [] },
+  idReunion : { type: Schema.Types.ObjectId, ref: 'Reunion', required: true }, 
 }, { discriminatorKey: 'tipo', collection: 'Puntos' });
 
 export const PuntoModel =
