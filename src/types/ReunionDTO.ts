@@ -1,5 +1,3 @@
-import { ObjectId } from 'mongodb'; // Importa ObjectId de MongoDB
-
 /*
 DTO define la forma de los datos que se transferirán entre capas 
 (p. ej., del backend al frontend). No está vinculado al modelo de 
@@ -7,13 +5,12 @@ base de datos y, por lo general, solo incluye los datos que necesita
 el consumidor.
 */
 
-// If you are using MongoDB, import ObjectId from 'mongodb' or define it as a type alias if needed.
-import { ObjectId } from 'mongodb';
+import mongoose from 'mongoose';
 
 export interface CrearReunionDTO {
-    _id: string; // ID generado por el cliente
+    _id: mongoose.Types.ObjectId; // ID generado por el cliente
     titulo: string;
-    organizacion: string;
+    organizacion: mongoose.Types.ObjectId;
     hora_inicio: Date;
     hora_fin: Date;
     archivos: string[]; // urls de los archivos
@@ -22,5 +19,5 @@ export interface CrearReunionDTO {
     tipo_reunion: 'Extraordinaria' | 'Ordinaria';
     modalidad: 'Presencial' | 'Virtual';
     agenda: string;
-    puntos: ObjectId[];
+    puntos: mongoose.Types.ObjectId[];
 }

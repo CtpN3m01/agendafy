@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Types } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
 /*
 Esta interfaz define la estructura de un documento
@@ -8,7 +8,7 @@ convocados, lugar, tipo de reunión, modalidad, agenda y puntos.
 */
 
 export interface IReunion extends Document {
-  _id: string;
+  _id: mongoose.Types.ObjectId;
   titulo: string;
   organizacion: mongoose.Types.ObjectId; // Cambiado a referencia de Organizacion
   hora_inicio: Date;
@@ -19,7 +19,7 @@ export interface IReunion extends Document {
   tipo_reunion: 'Extraordinaria' | 'Ordinaria';
   modalidad: 'Presencial' | 'Virtual';
   agenda: string;
-  puntos: Types.ObjectId[];
+  puntos: mongoose.Types.ObjectId[];
 }
 
 /*
@@ -28,7 +28,7 @@ Incluye los campos requeridos y sus tipos de datos.
 */
 
 const ReunionSchema = new Schema<IReunion>({
-  _id: { type: String, required: true },
+  _id: { type: Schema.Types.ObjectId, required: true },
   titulo: { type: String, required: true },
   organizacion: { type: Schema.Types.ObjectId, ref: 'Organizacion', required: true }, // Actualizado
   hora_inicio: { type: Date, required: true },
@@ -56,4 +56,4 @@ para interactuar con la colección 'Reuniones' en la base de datos.
 */
 
 export const ReunionModel =
-  mongoose.models.Reunion || mongoose.model<IReunion>('Reunion', ReunionSchema);
+  mongoose.models.Reunion || mongoose.model<IReunion>('Reuniones', ReunionSchema);
