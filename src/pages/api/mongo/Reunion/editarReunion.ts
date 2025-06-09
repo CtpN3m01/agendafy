@@ -10,13 +10,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     await connectToDatabase();
     const reunionService = new ReunionService();
-    const { id, ...updateData } = req.body;
+    const { _id, ...updateData } = req.body;
 
-    if (!id) {
+    if (!_id) {
       return res.status(400).json({ message: 'ID requerido' });
     }
 
-    const updated = await reunionService.editarReunion(id, updateData);
+    const updated = await reunionService.editarReunion(_id, updateData);
 
     if (!updated) {
       return res.status(404).json({ message: 'Reunión no encontrada' });

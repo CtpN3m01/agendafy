@@ -33,17 +33,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const { id } = req.body;
-
-    if (!id) {
+    // Obtener ID de múltiples formas (más flexible)
+    let organizacionId: string;
+    
+    // Opción 1: ID en query parameters
+    if (req.query.id && typeof req.query.id === 'string') {
+      organizacionId = req.query.id;
+    }
+    // Opción 2: ID en el body
+    else if (req.body?.id) {
+      organizacionId = req.body.id;
+    }
+    // Opción 3: Mensaje de error más descriptivo
+    else {
       return res.status(400).json({
         success: false,
-        message: 'ID de organización requerido'
+        message: 'ID de organización requerido',
+        hint: 'Envía el ID como query parameter (?id=tu_id) o en el body como JSON'
       });
     }
 
+    // Validar formato del ID
+    if (!/^[0-9a-fA-F]{24}$/.test(organizacionId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Formato de ID inválido',
+        details: 'El ID debe ser un ObjectId válido de MongoDB (24 caracteres hexadecimales)'
+      });
+    }
+
+    console.log('ID recibido para eliminar:', organizacionId);
+
     const organizacionService = new OrganizacionService();
-    const resultado = await organizacionService.eliminarOrganizacion(id, decoded.userId);
+    const resultado = await organizacionService.eliminarOrganizacion(organizacionId, decoded.userId);
 
     if (resultado.success) {
       return res.status(200).json(resultado);
@@ -55,7 +77,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('Error al eliminar organización:', error);
     return res.status(500).json({
       success: false,
-      message: 'Error interno del servidor'
+      message: 'Error interno del servidor',
+      details: error instanceof Error ? error.message : 'Error desconocido'
     });
   }
 }
