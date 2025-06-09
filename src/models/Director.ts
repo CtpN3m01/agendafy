@@ -22,7 +22,6 @@ export class Director {
   }
 
   buildActaCompleta(): IActa {
-    this.builder.reset();
     this.builder.crearEncabezado();
     this.builder.crearCuerpo();
     this.builder.crearPiePagina();

@@ -1,7 +1,7 @@
-import { ActaBuilder } from '@/models/ActaBuilder';
-import { IActa, ActaModel } from '@/models/Acta';
-import { CrearReunionDTO } from '@/types/ReunionDTO';
-import { PuntoResponseDTO } from '@/types/PuntoDTO';
+import { ActaBuilder } from '../models/ActaBuilder';
+import { IActa, ActaModel } from '../models/Acta';
+import { CrearReunionDTO } from '../types/ReunionDTO';
+import { PuntoResponseDTO } from '../types/PuntoDTO';
 
 /*
 La clase ActaRegularBuilder implementa la interfaz ActaBuilder
@@ -32,19 +32,33 @@ export class ActaRegularBuilder implements ActaBuilder {
   crearEncabezado(): void {
     if (!this.reunion) return;
 
-    const fecha = new Date(this.reunion.hora_inicio).toLocaleDateString('es-CR');
-    const hora = new Date(this.reunion.hora_inicio).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' });
+    const fecha = new Date(this.reunion.hora_inicio);
+    const fechaTexto = fecha.toLocaleDateString('es-CR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const horaTexto = fecha.toLocaleTimeString('es-CR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    const participantes = this.reunion.convocados.join('\n');
 
     this.actaData.encabezado = 
-    `ACTA DE REUNIÓN ${this.reunion.tipo_reunion.toUpperCase()} - ${this.reunion.titulo.toUpperCase()}
+    `ACTA ${this.reunion.titulo.toUpperCase()}
+    ${this.reunion.tipo_reunion.toUpperCase()}
 
-    Fecha: ${fecha}
-    Hora de inicio: ${hora}
-    Lugar: ${this.reunion.lugar}
+    Sesión ${this.reunion.tipo_reunion.toLowerCase()} realizada el ${fechaTexto}, a la ${horaTexto}, en ${this.reunion.lugar}.
+    Organización: ${this.reunion.organizacion}
     Modalidad: ${this.reunion.modalidad}
-    Organización: ${this.reunion.organizacion}`;
-  }
 
+    Participantes convocados:
+    ${participantes}
+
+    Firma`;
+  }
 
   crearCuerpo(): void {
     if (!this.reunion || !this.puntos) return;
