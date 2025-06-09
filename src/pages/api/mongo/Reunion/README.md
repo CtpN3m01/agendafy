@@ -4,9 +4,9 @@
 
 - [Crear Reunion](#crear-reunion)
 - [Eliminar Reunion](#eliminar-reunion)
-- [Actualizar Reunion](#actualizar-reunion)
+- [Actualizar Reunion](#editar-reunion)
 - [Obtener Reunion](#obtener-reunion)
-
+- [Enviar Correo](#enviar-correo)
 
 ## Crear Reunion
 
