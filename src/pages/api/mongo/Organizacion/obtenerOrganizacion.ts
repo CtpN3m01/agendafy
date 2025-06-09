@@ -34,18 +34,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const organizacionService = new OrganizacionService();
-    const organizaciones = await organizacionService.obtenerOrganizacionesPorUsuario(decoded.userId);
+    
+    // Si se proporciona un ID específico en query parameters
+    const { id } = req.query;
+    
+    if (id && typeof id === 'string') {
+      // Obtener organización específica
+      const organizacion = await organizacionService.obtenerOrganizacion(id);
+      
+      if (!organizacion) {
+        return res.status(404).json({
+          success: false,
+          message: 'Organización no encontrada'
+        });
+      }
 
-    return res.status(200).json({
-      success: true,
-      organizaciones
-    });
+      // Verificar que el usuario tiene acceso a esta organización
+      if (organizacion.usuario.id !== decoded.userId) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permisos para ver esta organización'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        organizacion // Devuelve organizacion con logo en base64
+      });
+    } else {
+      // Obtener todas las organizaciones del usuario
+      const organizaciones = await organizacionService.obtenerOrganizacionesPorUsuario(decoded.userId);
+
+      return res.status(200).json({
+        success: true,
+        organizaciones // ✅ CAMBIADO: cada organizacion incluye logo en base64
+      });
+    }
 
   } catch (error) {
     console.error('Error al obtener organizaciones:', error);
     return res.status(500).json({
       success: false,
-      message: 'Error interno del servidor'
+      message: 'Error interno del servidor',
+      details: error instanceof Error ? error.message : 'Error desconocido'
     });
   }
 }

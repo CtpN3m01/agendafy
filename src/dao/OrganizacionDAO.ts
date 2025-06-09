@@ -6,6 +6,12 @@ import '@/models/Reunion'; // Asegurar que el modelo Reunion esté registrado
 import { CrearOrganizacionDTO, OrganizacionResponseDTO, ActualizarOrganizacionDTO } from '@/types/OrganizacionDTO';
 import { connectToDatabase } from '@/lib/mongodb';
 
+/* 
+DAO es responsable de acceder a los datos de una base de datos. 
+Encapsula toda la lógica para interactuar con la base de datos, 
+como consultas, inserciones, actualizaciones o eliminaciones.
+*/
+
 export interface IOrganizacionDAO {
   crearOrganizacion(organizacion: CrearOrganizacionDTO): Promise<OrganizacionResponseDTO>;
   buscarPorId(id: string): Promise<OrganizacionResponseDTO | null>;
@@ -28,7 +34,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
       correo: organizacionData.correo,
       telefono: organizacionData.telefono,
       direccion: organizacionData.direccion,
-      foto: organizacionData.foto,
+      logo: organizacionData.logo,
       usuario: organizacionData.usuarioId
     });
 
@@ -138,7 +144,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
       correo: organizacion.correo,
       telefono: organizacion.telefono,
       direccion: organizacion.direccion,
-      foto: organizacion.foto,
+      logo: organizacion.logo ? organizacion.logo.toString('base64') : undefined, 
       usuario: {
         id: organizacion.usuario?._id?.toString() || organizacion.usuario,
         nombre: organizacion.usuario?.nombre || '',
@@ -159,19 +165,5 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
       createdAt: organizacion.createdAt,
       updatedAt: organizacion.updatedAt
     };
-/* 
-DAO es responsable de acceder a los datos de una base de datos. 
-Encapsula toda la lógica para interactuar con la base de datos, 
-como consultas, inserciones, actualizaciones o eliminaciones.
-*/
-
-export class OrganizacionDAO {
-  async create(data: Partial<IOrganizacion>): Promise<IOrganizacion> {
-    const doc = new OrganizacionModel(data);
-    return doc.save();
-  }
-
-  async findAll(): Promise<IOrganizacion[]> {
-    return OrganizacionModel.find().exec();
-  }
+  } 
 }
