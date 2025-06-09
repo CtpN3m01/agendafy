@@ -188,7 +188,7 @@
 
 ```json
 {
-  "to": "string",
+  "to": ["string"],
   "subject": "string",
   "detalles": {
     "titulo": "string",
@@ -199,6 +199,50 @@
     "modalidad": "string",
     "archivos": ["string"],
     "agenda": "string",
-    "puntos": ["string"]
+    "puntos": ["string"],
+    "convocados": [
+      {
+        "nombre": "string",
+        "correo": "string",
+        "esInvitado": true
+      },
+      {
+        "nombre": "string",
+        "correo": "string",
+        "esInvitado": false
+      }
+    ]
   }
 }
+```
+
+### Ejemplo
+```json
+{
+  "to": ["mailandresliang@gmail.com"],
+  "subject": "Reunion 2",
+  "detalles": {
+    "titulo": "string",
+    "hora_inicio": "2024-06-10T14:30:00Z",
+    "hora_fin": "2024-06-10T15:00:00Z",
+    "lugar": "TEC",
+    "tipo_reunion": "Extraordinaria",
+    "modalidad": "Virtual",
+    "archivos": ["354ab837-6a79-4180-b479-17255862d357/Diagrama%20en%20blanco%20(1).png"],
+    "agenda": "AG-01",
+    "puntos": [],
+    "convocados": [
+      {
+        "nombre": "Benji",
+        "correo": "mailandresliang@gmail.com",
+        "esMiembro": true
+      },
+      {
+        "nombre": "Juan Perez",
+        "correo": "juanperez@email.com",
+        "esMiembro": false
+      }
+    ]
+  }
+}
+```
