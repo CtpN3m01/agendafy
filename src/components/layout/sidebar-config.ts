@@ -51,9 +51,4 @@ export const defaultSidebarConfig: SidebarConfig = {
       ],
     },
   ],
-  user: {
-    name: "Saymon",
-    email: "CtpN3m0@example.com",
-    initials: "CN",
-  },
 };

@@ -3,6 +3,7 @@
 
 import { AuthProvider } from '@/hooks/use-auth';
 import { useMounted } from '@/hooks/use-mounted';
+import { Toaster } from 'sonner';
 import type { ReactNode } from 'react';
 
 interface ClientProvidersProps {
@@ -15,6 +16,7 @@ export function ClientProviders({ children }: ClientProvidersProps) {
   return (
     <AuthProvider>
       {children}
+      <Toaster position="top-right" richColors />
     </AuthProvider>
   );
 }

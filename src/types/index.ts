@@ -8,31 +8,8 @@ export interface UserProfile {
   position?: string;
   department?: string;
   bio?: string;
-  preferences: UserPreferences;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface UserPreferences {
-  theme: "light" | "dark" | "system";
-  language: string;
-  timezone: string;
-  notifications: NotificationSettings;
-  privacy: PrivacySettings;
-}
-
-export interface NotificationSettings {
-  email: boolean;
-  push: boolean;
-  sms: boolean;
-  meetingReminders: boolean;
-  weeklyDigest: boolean;
-}
-
-export interface PrivacySettings {
-  profileVisibility: "public" | "private" | "organization";
-  showOnlineStatus: boolean;
-  allowDirectMessages: boolean;
 }
 
 // Tipos para Autenticación
