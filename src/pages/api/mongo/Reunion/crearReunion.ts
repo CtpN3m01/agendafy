@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const reunionData = req.body;
 
         // Validación básica
-        if (!reunionData._id || 
+        if (
             !reunionData.titulo || 
             !reunionData.organizacion || 
             !reunionData.hora_inicio || 
