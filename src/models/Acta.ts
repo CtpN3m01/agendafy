@@ -8,8 +8,12 @@ almacenados en la base de datos.
 */
 
 export interface IActa extends Document {
+  logo?: string;
   encabezado: string;
+  paginaInicial: string;
+  indicePuntos: string;
   cuerpo: string;
+  paginaFirmas: string;
   piePagina: string;
 }
 
@@ -21,8 +25,12 @@ Este esquema se utiliza para validar los documentos
 */
 
 const ActaSchema = new Schema<IActa>({
+  logo: { type: String},
   encabezado: { type: String, required: true },
+  paginaInicial: { type: String, required: true },
+  indicePuntos: { type: String, required: true },
   cuerpo: { type: String, required: true },
+  paginaFirmas: { type: String, required: true },
   piePagina: { type: String, required: true },
 });
 

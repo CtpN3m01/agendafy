@@ -1,7 +1,9 @@
 import { ActaBuilder } from '../models/ActaBuilder';
 import { IActa, ActaModel } from '../models/Acta';
+
 import { CrearReunionDTO } from '../types/ReunionDTO';
 import { PuntoResponseDTO } from '../types/PuntoDTO';
+import { OrganizacionResponseDTO } from '../types/OrganizacionDTO';
 
 /*
 La clase ActaRegularBuilder implementa la interfaz ActaBuilder
@@ -12,25 +14,39 @@ Esta clase se encarga de construir un Acta regular.
 export class ActaRegularBuilder implements ActaBuilder {
   private actaData: Partial<IActa> = {};
   private reunion?: CrearReunionDTO;
+  private organizacion?: OrganizacionResponseDTO;
   private puntos: PuntoResponseDTO[] = [];
 
   constructor() {
     this.reset();
   }
 
-  setDatos(reunion: CrearReunionDTO, puntos: PuntoResponseDTO[]): void {
+  setDatos(reunion: CrearReunionDTO, puntos: PuntoResponseDTO[], organizacion: OrganizacionResponseDTO): void {
     this.reunion = reunion;
     this.puntos = puntos;
+    this.organizacion = organizacion;
   }
 
   reset(): void {
     this.actaData = {};
     this.reunion = undefined;
     this.puntos = [];
+    this.organizacion = undefined;
   }
 
   crearEncabezado(): void {
-    if (!this.reunion) return;
+    if (!this.organizacion) return;
+
+    const { nombre, logo } = this.organizacion;
+
+    this.actaData.encabezado = 
+    `${nombre.toUpperCase()}
+    ${logo ? `[Logo: ${logo}]` : ''}`.trim();
+    this.actaData.logo = logo || '';
+  }
+
+  crearPaginaInicial(): void {
+    if (!this.reunion || !this.organizacion) return;
 
     const fecha = new Date(this.reunion.hora_inicio);
     const fechaTexto = fecha.toLocaleDateString('es-CR', {
@@ -46,27 +62,54 @@ export class ActaRegularBuilder implements ActaBuilder {
 
     const participantes = this.reunion.convocados.join('\n');
 
-    this.actaData.encabezado = 
+    this.actaData.paginaInicial = 
     `ACTA ${this.reunion.titulo.toUpperCase()}
     ${this.reunion.tipo_reunion.toUpperCase()}
 
     Sesión ${this.reunion.tipo_reunion.toLowerCase()} realizada el ${fechaTexto}, a la ${horaTexto}, en ${this.reunion.lugar}.
-    Organización: ${this.reunion.organizacion}
+    Organización: ${this.organizacion.nombre}
     Modalidad: ${this.reunion.modalidad}
 
     Participantes convocados:
     ${participantes}
 
-    Firma`;
+    Secretaria de Actas: \n
+    \t\t\t ${this.organizacion.usuario.nombre}`;
+  }
+
+  crearIndicePuntos(): void {
+    if (!this.reunion || !this.puntos || !this.organizacion) return;
+
+    let indice = `AGENDA DE PUNTOS CONSULTADOS\n\n`;
+
+    this.puntos.forEach((punto, index) => {
+      indice += `${index + 1}. ${punto.titulo}\n`;
+    });
+
+    indice += `\n\n\n`;
+
+    const horaInicio = new Date(this.reunion.hora_inicio).toLocaleTimeString('es-CR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    // Buscar al presidente
+    const presidente = this.organizacion.miembros.find(m => m.rol?.toLowerCase() === 'presidente');
+
+    const nombrePresidente = presidente?.nombre ?? '________________';
+    const nombreOrg = this.organizacion.nombre;
+
+    indice += `Hora de inicio: ${horaInicio}\n\n`;
+    indice += `El presidente ${nombrePresidente}, quien preside el Consejo de la organización "${nombreOrg}", procede a dar la bienvenida a los miembros del consejo.`;
+
+    this.actaData.indicePuntos = indice;
   }
 
   crearCuerpo(): void {
     if (!this.reunion || !this.puntos) return;
 
-    let cuerpo = `AGENDA:\n${this.reunion.agenda}\n\n`;
-    cuerpo += `PARTICIPANTES (${this.reunion.convocados.length}):\n${this.reunion.convocados.join(', ')}\n\n`;
-
-    cuerpo += `ARTÍCULOS DE LA SESIÓN:\n`;
+    let cuerpo = `ARTÍCULOS DE LA SESIÓN:\n`;
 
     this.puntos.forEach((punto, i) => {
       cuerpo += `
@@ -85,19 +128,37 @@ export class ActaRegularBuilder implements ActaBuilder {
     this.actaData.cuerpo = cuerpo;
   }
 
-  crearPiePagina(): void {
-    const fechaGeneracion = new Date().toLocaleDateString('es-CR');
-    this.actaData.piePagina = 
-    `Acta generada electrónicamente el ${fechaGeneracion}.
+  crearPaginaFirmas(): void {
+    if (!this.organizacion) return;
 
-    _____________________________
-    Presidente del Consejo
+    const fechaGeneracion = new Date().toLocaleDateString('es-CR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
 
-    _____________________________
-    Secretario(a)
-    `;
+    const presidente = this.organizacion.miembros.find(
+      m => m.rol?.trim().toLowerCase() === 'presidente'
+    );
+    const nombrePresidente = presidente?.nombre ?? '________________';
+    const nombreSecretario = this.organizacion.usuario?.nombre ?? '________________';
+    
+    this.actaData.paginaFirmas =
+      `Presidente del Consejo - ${nombrePresidente}\n` +
+      `Secretario(a) - ${nombreSecretario}\n` +
+      `Acta generada electrónicamente el ${fechaGeneracion}`;
   }
 
+  crearPiePagina(): void {
+    if (!this.organizacion) return;
+
+    const { usuario, telefono } = this.organizacion;
+
+    this.actaData.piePagina =
+    `     ${usuario.nombre}
+     ${usuario.correo}
+     ${telefono}`;
+  }
 
   obtenerActa(): IActa {
     const acta = new ActaModel(this.actaData);
