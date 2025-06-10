@@ -119,28 +119,6 @@ export function OrganizationInfo({ organization }: OrganizationInfoProps) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Configuración Rápida</CardTitle>
-            <CardDescription>
-              Acciones principales de la organización
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button className="w-full justify-start" variant="outline">
-              <Users className="h-4 w-4 mr-2" />
-              Invitar Miembros
-            </Button>
-            <Button className="w-full justify-start" variant="outline">
-              <Calendar className="h-4 w-4 mr-2" />
-              Crear Primera Reunión
-            </Button>
-            <Button className="w-full justify-start" variant="outline">
-              <Settings className="h-4 w-4 mr-2" />
-              Configurar Organización
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

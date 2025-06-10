@@ -30,7 +30,7 @@ Incluye los campos requeridos y sus tipos de datos.
 const ReunionSchema = new Schema<IReunion>({
   _id: { type: Schema.Types.ObjectId, required: true },
   titulo: { type: String, required: true },
-  organizacion: { type: Schema.Types.ObjectId, ref: 'Organizacion', required: true }, // Actualizado
+  organizacion: { type: Schema.Types.ObjectId, ref: 'Organizacion', required: true },
   hora_inicio: { type: Date, required: true },
   hora_fin: { type: Date, required: false },
   archivos: { type: [String], default: [] },

@@ -2,9 +2,6 @@ import type { NextApiResponse } from 'next';
 import { connectToDatabase } from '@/lib/mongodb';
 import { OrganizacionService } from '@/services/OrganizacionService';
 import { upload, runMiddleware, NextApiRequestWithFiles } from '@/lib/multer';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'tu-secreto-super-seguro-para-jwt-2025';
 
 // Desactivar el parser de body por defecto para multer
 export const config = {
@@ -19,45 +16,36 @@ export default async function handler(req: NextApiRequestWithFiles, res: NextApi
   }
 
   try {
-    await connectToDatabase();
-
-    // Ejecutar multer middleware
+    await connectToDatabase();    // Ejecutar multer middleware
     await runMiddleware(req, res, upload.single('logo'));
 
-    // Verificar autenticación
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token de autorización requerido'
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as any;
-    } catch (error) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token inválido'
-      });
-    }
-
-    // Obtener ID de la organización (múltiples formas)
+    // Obtener ID de la organización y usuarioId directamente del request
     let organizacionId = req.query.id as string;
-    
+    let usuarioId: string;    
     // Si no está en query, revisar si está en el body
     if (!organizacionId && req.body.id) {
       organizacionId = req.body.id;
     }
 
-    // Validar que tenemos el ID
+    // Validar que tenemos el ID de organización
     if (!organizacionId) {
       return res.status(400).json({
         success: false,
         message: 'ID de organización requerido',
         hint: 'Envía el ID como query parameter: ?id=tu_id_aqui'
+      });
+    }
+
+    // Obtener usuarioId
+    if (req.query.usuarioId && typeof req.query.usuarioId === 'string') {
+      usuarioId = req.query.usuarioId;
+    } else if (req.body?.usuarioId) {
+      usuarioId = req.body.usuarioId;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de usuario requerido',
+        hint: 'Envía el usuarioId como query parameter o en el body'
       });
     }
 
@@ -104,13 +92,11 @@ export default async function handler(req: NextApiRequestWithFiles, res: NextApi
     if (correo) datosActualizacion.correo = correo;
     if (telefono) datosActualizacion.telefono = telefono;
     if (direccion) datosActualizacion.direccion = direccion;
-    if (logoBuffer) datosActualizacion.logo = logoBuffer;
-
-    const organizacionService = new OrganizacionService();
+    if (logoBuffer) datosActualizacion.logo = logoBuffer;    const organizacionService = new OrganizacionService();
     const resultado = await organizacionService.actualizarOrganizacion(
       organizacionId,
       datosActualizacion,
-      decoded.userId
+      usuarioId
     );
 
     if (resultado.success) {

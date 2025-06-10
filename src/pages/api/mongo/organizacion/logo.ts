@@ -1,9 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { connectToDatabase } from '@/lib/mongodb';
 import { OrganizacionModel } from '@/models/Organizacion';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'tu-secreto-super-seguro-para-jwt-2025';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -12,26 +9,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     await connectToDatabase();
-
-    // Verificar autenticación
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token de autorización requerido'
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as any;
-    } catch (error) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token inválido'
-      });
-    }
 
     // Obtener ID de la organización
     const { id } = req.query;
@@ -50,14 +27,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({
         success: false,
         message: 'Organización no encontrada'
-      });
-    }
-
-    // Verificar que el usuario tiene acceso
-    if (organizacion.usuario.toString() !== decoded.userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'No tienes permisos para ver esta imagen'
       });
     }
 

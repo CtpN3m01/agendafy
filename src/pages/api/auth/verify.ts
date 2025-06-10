@@ -2,11 +2,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'tu-secreto-super-seguro-para-jwt-2025';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Método no permitido' });
+  }
+
+  if (!JWT_SECRET) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error de configuración del servidor'
+    });
   }
 
   try {

@@ -2,9 +2,6 @@ import type { NextApiResponse } from 'next';
 import { connectToDatabase } from '@/lib/mongodb';
 import { OrganizacionService } from '@/services/OrganizacionService';
 import { upload, runMiddleware, NextApiRequestWithFiles } from '@/lib/multer';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'tu-secreto-super-seguro-para-jwt-2025';
 
 // Desactivar el parser de body por defecto para multer
 export const config = {
@@ -24,36 +21,16 @@ export default async function handler(req: NextApiRequestWithFiles, res: NextApi
     // Ejecutar multer middleware
     await runMiddleware(req, res, upload.single('logo'));
 
-    // Verificar autenticación
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token de autorización requerido'
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as any;
-    } catch (error) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token inválido'
-      });
-    }
-
     // Extraer datos del body
-    const { nombre, correo, telefono, direccion } = req.body;
+    const { nombre, correo, telefono, direccion, usuarioId } = req.body;
 
     // Validaciones básicas
-    if (!nombre || !correo || !telefono || !direccion) {
+    if (!nombre || !correo || !telefono || !direccion || !usuarioId) {
       return res.status(400).json({
         success: false,
         message: 'Datos incompletos',
         errors: {
-          general: ['Nombre, correo, teléfono y dirección son requeridos']
+          general: ['Nombre, correo, teléfono, dirección y usuarioId son requeridos']
         }
       });
     }
@@ -68,7 +45,9 @@ export default async function handler(req: NextApiRequestWithFiles, res: NextApi
           correo: ['El formato del correo no es válido']
         }
       });
-    }    // Procesar el logo si existe
+    }
+
+    // Procesar el logo si existe
     let logoBuffer: Buffer | undefined;
     if (req.file) {
       // Verificar tamaño del archivo (máximo 1MB)
@@ -93,7 +72,7 @@ export default async function handler(req: NextApiRequestWithFiles, res: NextApi
       telefono,
       direccion,
       logo: logoBuffer,
-      usuarioId: decoded.userId
+      usuarioId
     });
 
     if (resultado.success) {

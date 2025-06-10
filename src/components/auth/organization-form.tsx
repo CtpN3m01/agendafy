@@ -105,31 +105,28 @@ export function OrganizationForm({ onComplete, showSkipButton = true }: Organiza
     }
 
     setIsLoading(true);
-    setErrors({});
-
-    try {
+    setErrors({});    try {
       const formDataToSend = new FormData();
       formDataToSend.append('nombre', formData.nombre);
       formDataToSend.append('correo', formData.correo);
       formDataToSend.append('telefono', formData.telefono);
       formDataToSend.append('direccion', formData.direccion);
       
-      if (formData.logo) {
-        formDataToSend.append('logo', formData.logo);
-      }      // Obtener token del localStorage
-      const token = localStorage.getItem('authToken');
-      
-      if (!token) {
-        setErrors({ general: ["Error de autenticación. Por favor, inicia sesión nuevamente."] });
+      // Agregar usuarioId
+      if (user?.id) {
+        formDataToSend.append('usuarioId', user.id);
+      } else {
+        setErrors({ general: ["Error: No se pudo obtener la información del usuario."] });
         setIsLoading(false);
         return;
+      }
+      
+      if (formData.logo) {
+        formDataToSend.append('logo', formData.logo);
       }
 
       const response = await fetch('/api/mongo/organizacion/crearOrganizacion', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
         body: formDataToSend,
       });
 

@@ -23,13 +23,12 @@ interface UseOrganizationReturn {
 }
 
 export function useOrganization(): UseOrganizationReturn {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const [organization, setOrganization] = useState<OrganizationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const fetchOrganization = async () => {
-    if (!token) {
+    if (!user?.id) {
       setIsLoading(false);
       return;
     }
@@ -38,10 +37,13 @@ export function useOrganization(): UseOrganizationReturn {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/mongo/organizacion/obtenerOrganizacion', {
+      // Construir URL con userId como query parameter
+      const url = new URL('/api/mongo/organizacion/obtenerOrganizacion', window.location.origin);
+      url.searchParams.append('userId', user.id);
+
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -70,14 +72,13 @@ export function useOrganization(): UseOrganizationReturn {
       setIsLoading(false);
     }
   };
-
   useEffect(() => {
-    if (user && token) {
+    if (user?.id) {
       fetchOrganization();
     } else {
       setIsLoading(false);
     }
-  }, [user, token]);
+  }, [user]);
 
   return {
     organization,

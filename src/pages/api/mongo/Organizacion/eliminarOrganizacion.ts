@@ -1,9 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { connectToDatabase } from '@/lib/mongodb';
 import { OrganizacionService } from '@/services/OrganizacionService';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'tu-secreto-super-seguro-para-jwt-2025';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'DELETE') {
@@ -13,43 +10,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     await connectToDatabase();
 
-    // Verificar autenticación
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token de autorización requerido'
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as any;
-    } catch (error) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token inválido'
-      });
-    }
-
-    // Obtener ID de múltiples formas (más flexible)
+    // Obtener ID y usuarioId directamente del request
     let organizacionId: string;
+    let usuarioId: string;
     
-    // Opción 1: ID en query parameters
+    // Obtener organizacionId de múltiples formas
     if (req.query.id && typeof req.query.id === 'string') {
       organizacionId = req.query.id;
-    }
-    // Opción 2: ID en el body
-    else if (req.body?.id) {
+    } else if (req.body?.id) {
       organizacionId = req.body.id;
-    }
-    // Opción 3: Mensaje de error más descriptivo
-    else {
+    } else {
       return res.status(400).json({
         success: false,
         message: 'ID de organización requerido',
         hint: 'Envía el ID como query parameter (?id=tu_id) o en el body como JSON'
+      });
+    }
+
+    // Obtener usuarioId
+    if (req.query.usuarioId && typeof req.query.usuarioId === 'string') {
+      usuarioId = req.query.usuarioId;
+    } else if (req.body?.usuarioId) {
+      usuarioId = req.body.usuarioId;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de usuario requerido',
+        hint: 'Envía el usuarioId como query parameter o en el body como JSON'
       });
     }
 
@@ -65,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('ID recibido para eliminar:', organizacionId);
 
     const organizacionService = new OrganizacionService();
-    const resultado = await organizacionService.eliminarOrganizacion(organizacionId, decoded.userId);
+    const resultado = await organizacionService.eliminarOrganizacion(organizacionId, usuarioId);
 
     if (resultado.success) {
       return res.status(200).json(resultado);
