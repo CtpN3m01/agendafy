@@ -74,7 +74,7 @@ export function useUserProfile() {
     try {
       console.log('Hook: updateUserProfile - Datos a enviar:', data);
       
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch('/api/mongo/user/profile', {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
