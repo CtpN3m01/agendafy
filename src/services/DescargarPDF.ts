@@ -5,7 +5,7 @@ import { CrearReunionDTO } from '@/types/ReunionDTO';
 import { PuntoResponseDTO } from '@/types/PuntoDTO';
 import { OrganizacionResponseDTO } from '@/types/OrganizacionDTO'; 
 
-import { generarPDF } from '@/services/generarPDF'; 
+import { generarPDF } from '@/services/GenerarPDF'; 
 
 import fs from 'fs';
 import path from 'path';
