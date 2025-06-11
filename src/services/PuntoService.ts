@@ -14,7 +14,9 @@ export class PuntoService {
         const dataParaCrear = {
             ...puntoData,
             agenda: mongoose.Types.ObjectId.createFromHexString(puntoData.agenda),
-            comentarios: puntoData.comentarios || '',
+            titulo: puntoData.titulo.trim(),
+            detalles: puntoData.detalles || '',
+            anotaciones: puntoData.anotaciones || '',
             archivos: puntoData.archivos || [],
             votosAFavor: puntoData.votosAFavor || 0,
             votosEnContra: puntoData.votosEnContra || 0,
