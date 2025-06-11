@@ -19,4 +19,17 @@ export interface CrearPuntoDTO {
   votosEnContra?: number;
   // Para Fondo
   decisiones?: string[];
+  agenda: string; // ID de la agenda como string
+}
+
+export interface ActualizarPuntoDTO {
+  titulo?: string;
+  tipo?: TipoPunto;
+  duracion?: number;
+  comentarios?: string;
+  expositor?: string;
+  archivos?: string[];
+  votosAFavor?: number;
+  votosEnContra?: number;
+  decisiones?: string[];
 }
