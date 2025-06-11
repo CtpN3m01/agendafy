@@ -22,13 +22,13 @@ export interface IOrganizacionDAO {
   actualizarOrganizacion(id: string, datos: ActualizarOrganizacionDTO): Promise<OrganizacionResponseDTO | null>;
   eliminarOrganizacion(id: string): Promise<boolean>;
   agregarMiembro(organizacionId: string, personaId: string): Promise<void>;
-  removerMiembro(organizacionId: string, personaId: string): Promise<void>;
+  eliminarMiembro(organizacionId: string, personaId: string): Promise<void>;
   agregarReunion(organizacionId: string, reunionId: string): Promise<void>;
 }
 
 export class OrganizacionDAOImpl implements IOrganizacionDAO {
   async crearOrganizacion(organizacionData: CrearOrganizacionDTO): Promise<OrganizacionResponseDTO> {
-    await connectToDatabase();
+    
     
     const organizacion = new OrganizacionModel({
       nombre: organizacionData.nombre,
@@ -50,7 +50,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   }
 
   async buscarPorId(id: string): Promise<OrganizacionResponseDTO | null> {
-    await connectToDatabase();
+    
     const organizacion = await OrganizacionModel.findById(id)
       .populate('usuario', 'nombre correo')
       .populate('miembros', 'nombre apellidos correo rol')
@@ -61,7 +61,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   }
 
   async buscarPorUsuario(usuarioId: string): Promise<OrganizacionResponseDTO[]> {
-    await connectToDatabase();
+    
     const organizaciones = await OrganizacionModel.find({ 
       usuario: usuarioId,
       isActive: true 
@@ -75,7 +75,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   }
 
   async buscarPorNombre(nombre: string): Promise<IOrganizacion | null> {
-    await connectToDatabase();
+    
     return await OrganizacionModel.findOne({ 
       nombre: { $regex: new RegExp(`^${nombre}$`, 'i') },
       isActive: true 
@@ -83,7 +83,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   }
 
   async buscarPorCorreo(correo: string): Promise<IOrganizacion | null> {
-    await connectToDatabase();
+    
     return await OrganizacionModel.findOne({ 
       correo: correo.toLowerCase(),
       isActive: true 
@@ -91,7 +91,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   }
 
   async actualizarOrganizacion(id: string, datos: ActualizarOrganizacionDTO): Promise<OrganizacionResponseDTO | null> {
-    await connectToDatabase();
+    
     const organizacion = await OrganizacionModel.findByIdAndUpdate(
       id, 
       datos, 
@@ -106,7 +106,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   }
 
   async eliminarOrganizacion(id: string): Promise<boolean> {
-    await connectToDatabase();
+    
     
     const result = await OrganizacionModel.findByIdAndDelete(id).exec();
     
@@ -114,23 +114,26 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   }
 
   async agregarMiembro(organizacionId: string, personaId: string): Promise<void> {
-    await connectToDatabase();
+    
     await OrganizacionModel.findByIdAndUpdate(
       organizacionId,
       { $addToSet: { miembros: personaId } }
     ).exec();
   }
 
-  async removerMiembro(organizacionId: string, personaId: string): Promise<void> {
-    await connectToDatabase();
+  // Eliminar miembro de la organización (solo del array miembros)
+  async eliminarMiembro(organizacionId: string, miembroId: string): Promise<void> {
     await OrganizacionModel.findByIdAndUpdate(
       organizacionId,
-      { $pull: { miembros: personaId } }
+      { 
+        $pull: { miembros: miembroId } // Solo remover del array, no eliminar el documento
+      },
+      { new: true }
     ).exec();
   }
 
   async agregarReunion(organizacionId: string, reunionId: string): Promise<void> {
-    await connectToDatabase();
+    
     await OrganizacionModel.findByIdAndUpdate(
       organizacionId,
       { $addToSet: { reuniones: reunionId } }
