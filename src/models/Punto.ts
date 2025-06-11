@@ -2,23 +2,24 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 /*
 La enumeración TipoPunto define los tipos de puntos que pueden existir en una agenda.
-Cada punto puede ser de tipo 'Aprobacion' o 'Fondo'.
+Cada punto puede ser de tipo 'Informativo', 'Aprobacion' o 'Fondo'.
 */
 
 export enum TipoPunto {
+  Informativo = 'Informativo',
   Aprobacion = 'Aprobacion',
   Fondo = 'Fondo',
 }
 
 /*
 La interfaz IPunto define la estructura de un documento de punto en una agenda.
-Cada punto tiene un título, un tipo (que es una de las opciones de TipoPunto), una duración,
-comentarios, un expositor y una lista de archivos asociados.
+Cada punto tiene un título, un tipo (que es una de las opciones de TipoPunto: Informativo, Aprobacion o Fondo), 
+una duración, comentarios, un expositor y una lista de archivos asociados.
 */
 
 export interface IPunto extends Document {
   titulo: string;
-  comentarios: string; // <-- Cambiado de descripcion a comentarios
+  comentarios: string; 
   duracion: number;
   tipo: TipoPunto;
   votosAFavor?: number;
@@ -26,7 +27,7 @@ export interface IPunto extends Document {
   decisiones?: string[];
   expositor: string;
   archivos?: string[];
-  agenda: mongoose.Types.ObjectId; // <-- Agregado para referencia a la agenda
+  agenda: mongoose.Types.ObjectId;
 }
 
 /*

@@ -2,11 +2,10 @@ import { CrearReunionDTO } from '@/types/ReunionDTO';
 import { ReunionDAO } from '@/dao/ReunionDAO';
 
 export class ReunionService {
-    private reunionDAO = new ReunionDAO();
-
-    async crearReunion(reunionData: CrearReunionDTO) {
+    private reunionDAO = new ReunionDAO();    async crearReunion(reunionData: CrearReunionDTO) {
         
-        if (new Date(reunionData.hora_inicio) >= new Date(reunionData.hora_fin)) {
+        // Solo validar hora_fin si está presente
+        if (reunionData.hora_fin && new Date(reunionData.hora_inicio) >= new Date(reunionData.hora_fin)) {
             throw new Error('La hora de inicio debe ser anterior a la hora de fin.');
         }
 
@@ -27,5 +26,9 @@ export class ReunionService {
 
     async obtenerReunionesPorOrganizacion(organizacionId: string) {
         return this.reunionDAO.findByOrganizacion(organizacionId);
+    }
+
+    async obtenerReunion(id: string) {
+        return this.reunionDAO.findById(id);
     }
 }

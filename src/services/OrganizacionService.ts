@@ -94,6 +94,11 @@ export class OrganizacionService {
     return await this.organizacionDAO.buscarPorUsuario(userId);
   }
 
+  async obtenerOrganizacionPorUsuario(userId: string): Promise<OrganizacionResponseDTO | null> {
+    const organizaciones = await this.organizacionDAO.buscarPorUsuario(userId);
+    return organizaciones.length > 0 ? organizaciones[0] : null;
+  }
+
   async actualizarOrganizacion(
     id: string, 
     datos: ActualizarOrganizacionDTO,
