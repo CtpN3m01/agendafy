@@ -1,6 +1,3 @@
-// API para obtener reuniones por organización
-// ruta /api/mongo/Reunion/obtenerReuniones
-
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { connectToDatabase } from '@/lib/mongodb';
 import { ReunionService } from '@/services/ReunionService';
@@ -13,16 +10,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     await connectToDatabase();
     const reunionService = new ReunionService();
-    const { organizacion } = req.query;
+    const { id } = req.query;
 
-    if (!organizacion || typeof organizacion !== 'string') {
-      return res.status(400).json({ message: 'ID de organización requerido' });
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ message: 'ID requerido' });
     }
 
-    const reuniones = await reunionService.obtenerReunionesPorOrganizacion(organizacion);
-    return res.status(200).json(reuniones);
+    const reunion = await reunionService.obtenerReunion(id);
+
+    if (!reunion) {
+      return res.status(404).json({ message: 'Reunión no encontrada' });
+    }
+
+    return res.status(200).json(reunion);
   } catch (error) {
-    console.error('Error al obtener las reuniones:', error);
+    console.error('Error al obtener la reunión:', error);
     return res.status(500).json({ message: 'Error interno del servidor' });
   }
 }

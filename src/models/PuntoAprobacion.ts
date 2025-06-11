@@ -28,6 +28,16 @@ PuntoAprobacionModel es el modelo de Mongoose que se utiliza
 para interactuar con la colección de puntos de aprobación.
 */
 
-export const PuntoAprobacionModel =
-  mongoose.models.PuntoAprobacion ||
-  PuntoModel.discriminator<IPuntoAprobacion>('Aprobacion', PuntoAprobacionSchema);
+export const PuntoAprobacionModel = (() => {
+  if (mongoose.models.PuntoAprobacion) {
+    return mongoose.models.PuntoAprobacion;
+  }
+  
+  // Verificar si el discriminador ya existe
+  const existingDiscriminator = (PuntoModel as any).discriminators?.['Aprobacion'];
+  if (existingDiscriminator) {
+    return existingDiscriminator;
+  }
+  
+  return PuntoModel.discriminator<IPuntoAprobacion>('Aprobacion', PuntoAprobacionSchema);
+})();

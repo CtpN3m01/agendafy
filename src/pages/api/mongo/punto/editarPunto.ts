@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { connectToDatabase } from '@/lib/mongodb';
-import { PuntoModel } from '@/models/Punto';
+import { PuntoService } from '@/services/PuntoService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PUT') {
@@ -9,21 +9,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     await connectToDatabase();
+    const puntoService = new PuntoService();
     const { id, ...updateData } = req.body;
 
     if (!id) {
       return res.status(400).json({ message: 'ID requerido' });
     }
 
-    const updated = await PuntoModel.findByIdAndUpdate(id, updateData, { new: true });
-
-    if (!updated) {
-      return res.status(404).json({ message: 'Punto no encontrado' });
-    }
+    const updated = await puntoService.editarPunto(id, updateData);
 
     return res.status(200).json({ message: 'Punto actualizado correctamente', punto: updated });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error al editar el punto:', error);
-    return res.status(500).json({ message: 'Error interno del servidor' });
+    return res.status(500).json({ message: error.message || 'Error interno del servidor' });
   }
 }

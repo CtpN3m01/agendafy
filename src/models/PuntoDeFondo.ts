@@ -23,6 +23,16 @@ PuntoDeFondoModel es el modelo de Mongoose que se utiliza
 para interactuar con la colección de puntos de fondo.
 */
 
-export const PuntoDeFondoModel =
-  mongoose.models.PuntoDeFondo ||
-  PuntoModel.discriminator<IPuntoDeFondo>('Fondo', PuntoDeFondoSchema);
+export const PuntoDeFondoModel = (() => {
+  if (mongoose.models.PuntoDeFondo) {
+    return mongoose.models.PuntoDeFondo;
+  }
+  
+  // Verificar si el discriminador ya existe
+  const existingDiscriminator = (PuntoModel as any).discriminators?.['Fondo'];
+  if (existingDiscriminator) {
+    return existingDiscriminator;
+  }
+  
+  return PuntoModel.discriminator<IPuntoDeFondo>('Fondo', PuntoDeFondoSchema);
+})();

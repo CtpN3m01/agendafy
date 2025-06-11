@@ -1,5 +1,6 @@
 import { PuntoAprobacionModel } from '@/models/PuntoAprobacion';
 import { PuntoDeFondoModel } from '@/models/PuntoDeFondo';
+import { PuntoInformativoModel } from '@/models/PuntoInformativo';
 import { TipoPunto } from '@/models/Punto';
 
 /*
@@ -27,6 +28,11 @@ en una agenda según el tipo especificado.
 export class PuntoFactory {
   static async crearPunto(data: PuntoData) {
     switch (data.tipo) {
+      case TipoPunto.Informativo:
+        return await new PuntoInformativoModel({
+          ...data,
+        }).save();
+
       case TipoPunto.Aprobacion:
         return await new PuntoAprobacionModel({
           ...data,

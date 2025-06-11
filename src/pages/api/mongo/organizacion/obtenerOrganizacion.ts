@@ -8,8 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    await connectToDatabase();
-
+    await connectToDatabase();    
     const organizacionService = new OrganizacionService();
     
     // Si se proporciona un ID específico en query parameters
@@ -37,8 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({
         success: true,
         organizaciones
-      });
-    } else {
+      });    } else {
       return res.status(400).json({
         success: false,
         message: 'Se requiere ID de organización o userId'

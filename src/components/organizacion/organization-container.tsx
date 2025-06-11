@@ -21,29 +21,7 @@ export function OrganizationContainer() {
     );
   }
 
-  if (error) {
-    return (
-      <Card className="max-w-md mx-auto">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 text-red-600">
-              <Building2 className="h-6 w-6" />
-            </div>
-          </div>
-          <CardTitle className="text-xl text-red-600">Error al cargar organización</CardTitle>
-          <CardDescription>{error}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <button
-            onClick={() => refetch()}
-            className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-          >
-            Reintentar
-          </button>
-        </CardContent>
-      </Card>
-    );
-  }
+
 
   // Si no hay organización, mostrar formulario de creación
   if (!organization) {
@@ -60,6 +38,31 @@ export function OrganizationContainer() {
           showSkipButton={false}
         />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="max-w-md mx-auto">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 text-red-600">
+              <Building2 className="h-6 w-6" />
+            </div>
+          </div>
+          <CardTitle className="text-xl text-red-600">Error al cargar organización</CardTitle>
+          <CardDescription>{error}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+          >
+            Reintentar
+          </button>
+        </CardContent>
+      </Card>
     );
   }
 

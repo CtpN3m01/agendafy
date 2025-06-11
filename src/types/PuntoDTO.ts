@@ -11,7 +11,8 @@ export interface CrearPuntoDTO {
   titulo: string;
   tipo: TipoPunto;
   duracion: number;
-  comentarios?: string;
+  detalles?: string; // Detalles de lo que se va a tratar en el punto
+  anotaciones?: string;
   expositor: string;
   archivos?: string[];
   // Para Aprobacion
@@ -26,7 +27,8 @@ export interface ActualizarPuntoDTO {
   titulo?: string;
   tipo?: TipoPunto;
   duracion?: number;
-  comentarios?: string;
+  detalles?: string; // Detalles de lo que se va a tratar en el punto
+  anotaciones?: string;
   expositor?: string;
   archivos?: string[];
   votosAFavor?: number;

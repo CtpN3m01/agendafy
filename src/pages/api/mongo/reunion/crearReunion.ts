@@ -11,10 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await connectToDatabase();
         const reunionService = new ReunionService();
         const reunionData = req.body;
-
-        // Validación básica
-        if (!reunionData._id || 
-            !reunionData.titulo || 
+        if (!reunionData.titulo || 
             !reunionData.organizacion || 
             !reunionData.hora_inicio || 
             !reunionData.lugar || 
