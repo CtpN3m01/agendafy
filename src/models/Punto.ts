@@ -19,7 +19,8 @@ una duración, comentarios, un expositor y una lista de archivos asociados.
 
 export interface IPunto extends Document {
   titulo: string;
-  comentarios: string; 
+  detalles?: string;
+  anotaciones?: string; 
   duracion: number;
   tipo: TipoPunto;
   votosAFavor?: number;
@@ -43,7 +44,8 @@ export const PuntoSchema = new Schema<IPunto>({
     required: true,
   },
   duracion: { type: Number, required: true },
-  comentarios: { type: String, default: '' },
+  detalles: { type: String, default: '' },
+  anotaciones: { type: String, default: '' },
   expositor: { type: String, required: true },
   archivos: { type: [String], default: [] },
   votosAFavor: { type: Number, default: 0 },
