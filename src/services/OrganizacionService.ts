@@ -226,4 +226,30 @@ export class OrganizacionService {
       };
     }
   }
+
+  async obtenerMiembrosJunta(id: string): Promise<Array<{
+    nombre: string;
+    correo: string;
+    esMiembro: boolean;
+  }> | null> {
+    try {
+      const organizacion = await this.organizacionDAO.buscarPorId(id);
+      
+      if (!organizacion) {
+        return null;
+      }
+
+      // Mapear los miembros al formato requerido
+      const miembrosJunta = organizacion.miembros.map(miembro => ({
+        nombre: `${miembro.nombre} ${miembro.apellidos}`.trim(),
+        correo: miembro.correo,
+        esMiembro: true
+      }));
+
+      return miembrosJunta;
+    } catch (error) {
+      console.error('Error en obtener miembros de la junta:', error);
+      throw error;
+    }
+  }
 }
