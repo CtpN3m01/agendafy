@@ -20,7 +20,18 @@
   "hora_inicio": "AAAA-MM-DDTHH:MM:SSZ",
   "hora_fin": "AAAA-MM-DDTHH:MM:SSZ",
   "archivos": ["string"],
-  "convocados": ["string"],
+  "convocados": [
+    {
+        "nombre": "string",
+        "correo": "string@email.com",
+        "esMiembro": true | false
+      },
+      {
+        "nombre": "string",
+        "correo": "string@email.com",
+        "esMiembro": false | true
+      }
+    ]
   "lugar": "string",
   "tipo_reunion": "string",
   "modalidad": "string",
@@ -38,7 +49,7 @@
     "hora_inicio": "AAAA-MM-DDTHH:MM:SSZ",
     "archivos": [],
     "convocados": [
-        "string"
+        // Json objects
     ],
     "lugar": "string",
     "tipo_reunion": "string",
@@ -63,7 +74,9 @@
     "titulo": "TEC-123",
     "organizacion": "60f7c7c3f8a7c23eec0f5f6d",
     "hora_inicio": "2025-06-05T15:32:00.000Z",
-    "convocados": ["miguel"],
+    "convocados": [
+      // json objects
+    ],
     "lugar": "tec",
     "tipo_reunion": "Extraordinaria",
     "modalidad": "Presencial",
@@ -101,7 +114,9 @@
   "hora_inicio": "AAAA-MM-DDTHH:MM:SSZ",
   "hora_fin": "AAAA-MM-DDTHH:MM:SSZ",
   "archivos": ["string"],
-  "convocados": ["string"],
+  "convocados": [
+    // JSON objects
+  ],
   "lugar": "string",
   "tipo_reunion": "string",
   "modalidad": "string",
@@ -122,7 +137,7 @@
         "hora_fin": "AAAA-MM-DDTHH:MM:SSZ",
         "archivos": [],
         "convocados": [
-            "string"
+            // JSON Objects
         ],
         "lugar": "string",
         "tipo_reunion": "string",
@@ -162,7 +177,7 @@
     "hora_fin": "AAAA-MM-DDTHH:MM:SSZ",
     "archivos": [],
     "convocados": [
-        "string"
+        // JSON oBjects
     ],
     "lugar": "string",
     "tipo_reunion": "string",
