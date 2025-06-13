@@ -1,9 +1,10 @@
-import { ActaBuilder } from '../models/ActaBuilder';
-import { IActa, ActaModel } from '../models/Acta';
+import { ActaBuilder } from '@/models/ActaBuilder';
+import { IActa, ActaModel } from '@/models/Acta';
 
+import { IAgenda } from '@/models/Agenda';
+import { IPunto } from '@/models/Punto';
+import { OrganizacionResponseDTO } from '@/types/OrganizacionDTO';
 import { CrearReunionDTO } from '../types/ReunionDTO';
-import { PuntoResponseDTO } from '../types/PuntoDTO';
-import { OrganizacionResponseDTO } from '../types/OrganizacionDTO';
 
 /*
 La clase ActaRegularBuilder implementa la interfaz ActaBuilder
@@ -15,13 +16,14 @@ export class ActaRegularBuilder implements ActaBuilder {
   private actaData: Partial<IActa> = {};
   private reunion?: CrearReunionDTO;
   private organizacion?: OrganizacionResponseDTO;
-  private puntos: PuntoResponseDTO[] = [];
+  private puntos: IPunto[] = [];
+  private agenda?: IAgenda;
 
   constructor() {
     this.reset();
   }
 
-  setDatos(reunion: CrearReunionDTO, puntos: PuntoResponseDTO[], organizacion: OrganizacionResponseDTO): void {
+  setDatos(reunion: CrearReunionDTO, agenda: IAgenda, puntos: IPunto[], organizacion: OrganizacionResponseDTO): void {
     this.reunion = reunion;
     this.puntos = puntos;
     this.organizacion = organizacion;
@@ -46,7 +48,7 @@ export class ActaRegularBuilder implements ActaBuilder {
   }
 
   crearPaginaInicial(): void {
-    if (!this.reunion || !this.organizacion) return;
+    if (!this.reunion || !this.organizacion || !this.agenda) return;
 
     const fecha = new Date(this.reunion.hora_inicio);
     const fechaTexto = fecha.toLocaleDateString('es-CR', {
@@ -63,7 +65,7 @@ export class ActaRegularBuilder implements ActaBuilder {
     const participantes = this.reunion.convocados.join('\n');
 
     this.actaData.paginaInicial = 
-    `ACTA ${this.reunion.titulo.toUpperCase()}
+    `ACTA ${this.agenda.nombre.toUpperCase()}
     ${this.reunion.tipo_reunion.toUpperCase()}
 
     Sesión ${this.reunion.tipo_reunion.toLowerCase()} realizada el ${fechaTexto}, a la ${horaTexto}, en ${this.reunion.lugar}.
@@ -118,10 +120,11 @@ export class ActaRegularBuilder implements ActaBuilder {
       Tipo: ${punto.tipo}
       Expositor: ${punto.expositor}
       Duración estimada: ${punto.duracion} minutos
-      ${punto.comentarios ? 'Comentarios: ' + punto.comentarios : ''}
+      ${punto.anotaciones ? 'Anotaciones: ' + punto.anotaciones : ''}
+      ${punto.detalles ? 'Detalles: ' + punto.detalles : ''}
 
       ${punto.votosAFavor !== undefined ? `Votos a favor: ${punto.votosAFavor}\nVotos en contra: ${punto.votosEnContra ?? 0}` : ''}
-      ${punto.decisiones ? `Decisiones: ${punto.decisiones.join('; ')}` : ''}
+      ${punto.decisiones && punto.decisiones.length > 0 ? `Decisiones: ${punto.decisiones.join('; ')}` : ''}
       ------------------------------------------------------------`;
     });
 

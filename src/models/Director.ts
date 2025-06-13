@@ -1,5 +1,5 @@
-import { ActaBuilder } from '../models/ActaBuilder';
-import { IActa } from '../models/Acta';
+import { ActaBuilder } from '@/models/ActaBuilder';
+import { IActa } from '@/models/Acta';
 
 /*
 Director es una clase que se encarga de construir un Acta completa utilizando un ActaBuilder.

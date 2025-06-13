@@ -66,14 +66,14 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
     // Si hay URL de logo, intenta cargarla como PNG o JPG
     if (logoUrl) {
       try {
-        const res = await fetch(logoUrl);
-        const buffer = await res.arrayBuffer();
-        const contentType = res.headers.get("content-type");
+        // Extraer el contenido base64 de la data URL
+        const base64Data = logoUrl.split(',')[1]; // elimina el "data:image/jpeg;base64,"
+        const buffer = Buffer.from(base64Data, 'base64');
 
-        // Procesar con sharp para recortar circular
-        const logoSize = 100; // Tamaño en píxeles para sharp
+        const logoSize = 100;
 
-        const roundedPngBuffer = await sharp(Buffer.from(buffer))
+        // Redondear la imagen con sharp
+        const roundedPngBuffer = await sharp(buffer)
           .resize(logoSize, logoSize)
           .composite([{
             input: Buffer.from(
@@ -84,10 +84,10 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
           .png()
           .toBuffer();
 
-        // Empotrar imagen PNG con transparencia en el PDF
+        // Empotrar en el PDF
         const logoImage = await pdfDoc.embedPng(roundedPngBuffer);
 
-        const displaySize = 50; // Tamaño de despliegue en el PDF
+        const displaySize = 50;
         const x = page.getWidth() - margin - displaySize;
         const y = page.getHeight() - 70;
 
@@ -149,8 +149,13 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
   };
 
   // Función para dibujar texto con salto de línea y manejo de página
-  const drawTextBlock = (page: PDFPage, text: string): void => {
+  const drawTextBlock = async (startPage: PDFPage, text: string): Promise<PDFPage> => {
+    let page = startPage;
     let y = usableTopY;
+
+    await drawHeader(page);
+    await drawFooter(page, pdfDoc.getPageCount() - 1, 4); // Número total se puede ajustar luego
+
     const paragraphs = text.split('\n');
 
     for (const paragraph of paragraphs) {
@@ -169,6 +174,8 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
         if (y < usableBottomY + lineHeight) {
           page = pdfDoc.addPage([pageWidth, pageHeight]);
           y = pageHeight - margin;
+          await drawHeader(page);
+          await drawFooter(page, pdfDoc.getPageCount() - 1, 4);
         }
 
         page.drawText(trimmed, {
@@ -193,6 +200,8 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
             if (y < usableBottomY + lineHeight) {
               page = pdfDoc.addPage([pageWidth, pageHeight]);
               y = pageHeight - margin;
+              await drawHeader(page);
+              await drawFooter(page, pdfDoc.getPageCount() - 1, 4);
             }
             drawFormattedLine(page, lineWords, y);
             y -= lineHeight;
@@ -208,6 +217,8 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
           if (y < usableBottomY + lineHeight) {
             page = pdfDoc.addPage([pageWidth, pageHeight]);
             y = pageHeight - margin;
+            await drawHeader(page);
+            await drawFooter(page, pdfDoc.getPageCount() - 1, 4);
           }
           drawFormattedLine(page, lineWords, y);
           y -= lineHeight;
@@ -216,6 +227,8 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
 
       y -= lineHeight / 2;
     }
+
+    return page;
   };
 
   const drawFormattedLine = (page: PDFPage, words: string[], yLine: number): void => {
@@ -308,29 +321,19 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
 
   // ---- CREAR LAS 4 PAGINAS SEPARADAS ----
 
-  // 1. Página Inicial con encabezado y pie
-  const pageInicial = pdfDoc.addPage([pageWidth, pageHeight]);
-  await drawHeader(pageInicial);
-  drawTextBlock(pageInicial, acta.paginaInicial);
-  await drawFooter(pageInicial, 0, 3);
+  let lastPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  lastPage = await drawTextBlock(lastPage, acta.paginaInicial);
 
-  // 2. Página de índices con encabezado y pie
-  const pageIndex = pdfDoc.addPage([pageWidth, pageHeight]);
-  await drawHeader(pageInicial);
-  drawTextBlock(pageIndex, acta.indicePuntos);
-  await drawFooter(pageInicial, 0, 3);
+  lastPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  lastPage = await drawTextBlock(lastPage, acta.indicePuntos);
 
-  // 3. Cuerpo en página nueva sin encabezado pero con pie
-  const pageCuerpo = pdfDoc.addPage([pageWidth, pageHeight]);
-  await drawHeader(pageCuerpo);
-  drawTextBlock(pageCuerpo, acta.cuerpo);
-  await drawFooter(pageCuerpo, 1, 3);
+  lastPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  lastPage = await drawTextBlock(lastPage, acta.cuerpo);
 
-  // 4. Página de Firmas en página nueva sin encabezado pero con pie
-  const pageFirmas = pdfDoc.addPage([pageWidth, pageHeight]);
-  await drawHeader(pageFirmas);
-  drawFirmas(pageFirmas, acta.paginaFirmas);
-  await drawFooter(pageFirmas, 2, 3);
+  lastPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  await drawHeader(lastPage);
+  drawFirmas(lastPage, acta.paginaFirmas);
+  await drawFooter(lastPage, pdfDoc.getPageCount() - 1, pdfDoc.getPageCount());
 
   // Guardar y retornar buffer
   const pdfBytes = await pdfDoc.save();

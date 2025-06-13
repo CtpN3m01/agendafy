@@ -2,7 +2,8 @@ import { Director } from '@/models/Director';
 import { ActaRegularBuilder } from '@/models/ActaRegularBuilder';
 
 import { CrearReunionDTO } from '@/types/ReunionDTO';
-import { PuntoResponseDTO } from '@/types/PuntoDTO';
+import { IPunto } from '@/models/Punto';
+import { IAgenda } from '@/models/Agenda';
 import { OrganizacionResponseDTO } from '@/types/OrganizacionDTO'; 
 
 import { generarPDF } from '@/services/GenerarPDF'; 
@@ -10,10 +11,10 @@ import { generarPDF } from '@/services/GenerarPDF';
 import fs from 'fs';
 import path from 'path';
 
-export async function crearYGuardarPDF(reunion: CrearReunionDTO, puntos: PuntoResponseDTO[],
-                                       organizacion: OrganizacionResponseDTO) {
+export async function crearYGuardarPDF(reunion: CrearReunionDTO, puntos: IPunto[],
+                                       organizacion: OrganizacionResponseDTO, agenda: IAgenda) {
   const builder = new ActaRegularBuilder();
-  builder.setDatos(reunion, puntos, organizacion);
+  builder.setDatos(reunion, agenda, puntos, organizacion);
   const director = new Director(builder);
   const acta = director.buildActaCompleta();
   const pdfBuffer = await generarPDF(acta);
