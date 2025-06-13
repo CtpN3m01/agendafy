@@ -27,6 +27,7 @@ export class ActaRegularBuilder implements ActaBuilder {
     this.reunion = reunion;
     this.puntos = puntos;
     this.organizacion = organizacion;
+    this.agenda = agenda;
   }
 
   reset(): void {
@@ -34,6 +35,7 @@ export class ActaRegularBuilder implements ActaBuilder {
     this.reunion = undefined;
     this.puntos = [];
     this.organizacion = undefined;
+    this.agenda = undefined;
   }
 
   crearEncabezado(): void {
@@ -62,10 +64,13 @@ export class ActaRegularBuilder implements ActaBuilder {
       hour12: true,
     });
 
-    const participantes = this.reunion.convocados.join('\n');
+    // Participantes con viñetas y marcador para centrar
+    const participantes = this.reunion.convocados
+      .map(nombre => `*CENTRAR*• ${nombre}`)
+      .join('\n');
 
     this.actaData.paginaInicial = 
-    `ACTA ${this.agenda.nombre.toUpperCase()}
+    `*CENTRAR*Acta ${this.agenda.nombre}
     ${this.reunion.tipo_reunion.toUpperCase()}
 
     Sesión ${this.reunion.tipo_reunion.toLowerCase()} realizada el ${fechaTexto}, a la ${horaTexto}, en ${this.reunion.lugar}.
@@ -75,8 +80,8 @@ export class ActaRegularBuilder implements ActaBuilder {
     Participantes convocados:
     ${participantes}
 
-    Secretaria de Actas: \n
-    \t\t\t ${this.organizacion.usuario.nombre}`;
+    Secretari(@) de Actas:
+    *CENTRAR*${this.organizacion.usuario.nombre}`;
   }
 
   crearIndicePuntos(): void {
@@ -114,18 +119,38 @@ export class ActaRegularBuilder implements ActaBuilder {
     let cuerpo = `ARTÍCULOS DE LA SESIÓN:\n`;
 
     this.puntos.forEach((punto, i) => {
-      cuerpo += `
-      Artículo ${i + 1}. ${punto.titulo}
+      cuerpo += `\nArtículo ${i + 1}. ${punto.titulo}\n`;
 
-      Tipo: ${punto.tipo}
-      Expositor: ${punto.expositor}
-      Duración estimada: ${punto.duracion} minutos
-      ${punto.anotaciones ? 'Anotaciones: ' + punto.anotaciones : ''}
-      ${punto.detalles ? 'Detalles: ' + punto.detalles : ''}
+      cuerpo += `Tipo: ${punto.tipo}\n`;
+      cuerpo += `Expositor: ${punto.expositor}\n`;
+      cuerpo += `Duración estimada: ${punto.duracion} minutos\n`;
 
-      ${punto.votosAFavor !== undefined ? `Votos a favor: ${punto.votosAFavor}\nVotos en contra: ${punto.votosEnContra ?? 0}` : ''}
-      ${punto.decisiones && punto.decisiones.length > 0 ? `Decisiones: ${punto.decisiones.join('; ')}` : ''}
-      ------------------------------------------------------------`;
+      if (punto.anotaciones) {
+        cuerpo += `Anotaciones: ${punto.anotaciones}\n`;
+      }
+
+      if (punto.detalles) {
+        cuerpo += `Detalles: ${punto.detalles}\n`;
+      }
+
+      // Condicional por tipo de punto
+      const tipo = punto.tipo.toLowerCase();
+
+      if (tipo.includes("aprobación") || tipo.includes("aprobacion")) {
+        if (punto.votosAFavor !== undefined) {
+          cuerpo += `Votos a favor: ${punto.votosAFavor}\n`;
+          cuerpo += `Votos en contra: ${punto.votosEnContra ?? 0}\n`;
+        }
+      }
+
+      if (tipo.includes("fondo")) {
+        if (punto.decisiones && punto.decisiones.length > 0) {
+          cuerpo += `Decisiones: ${punto.decisiones.join('; ')}\n`;
+        }
+      }
+
+      // Línea separadora
+      cuerpo += `------------------------------------------------------------\n`;
     });
 
     this.actaData.cuerpo = cuerpo;

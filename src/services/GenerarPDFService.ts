@@ -148,14 +148,104 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
     });
   };
 
-  // Función para dibujar texto con salto de línea y manejo de página
-  const drawTextBlock = async (startPage: PDFPage, text: string): Promise<PDFPage> => {
-    let page = startPage;
+  // Función para dibujar texto para la pagina inicial
+  const drawTextInicial = (page: PDFPage, text: string): void => {
     let y = usableTopY;
+    const paragraphs = text.split('\n');
 
-    await drawHeader(page);
-    await drawFooter(page, pdfDoc.getPageCount() - 1, 4); // Número total se puede ajustar luego
+    for (let paragraph of paragraphs) {
+      const trimmed = paragraph.trim();
+      if (!trimmed) {
+        y -= lineHeight;
+        continue;
+      }
 
+      const isCentered = centeredBoldPhrases.some(p => trimmed.startsWith(p));
+      const isCustomCentered = trimmed.startsWith('*CENTRAR*');
+
+      // Si debe centrarse por marcador
+      if (isCustomCentered) {
+        const cleanText = trimmed.replace('*CENTRAR*', '').trim();
+        const textWidth = regularFont.widthOfTextAtSize(cleanText, fontSize);
+        const x = (pageWidth - textWidth) / 2;
+
+        if (y < usableBottomY + lineHeight) {
+          page = pdfDoc.addPage([pageWidth, pageHeight]);
+          y = pageHeight - margin;
+        }
+
+        page.drawText(cleanText, {
+          x,
+          y,
+          size: fontSize,
+          font: regularFont,
+          color: rgb(0, 0, 0),
+        });
+        y -= lineHeight;
+        continue;
+      }
+
+      // Línea centrada y en negrita
+      if (isCentered) {
+        const textWidth = boldFont.widthOfTextAtSize(trimmed, fontSize + 1);
+        const x = (pageWidth - textWidth) / 2;
+
+        if (y < usableBottomY + lineHeight) {
+          page = pdfDoc.addPage([pageWidth, pageHeight]);
+          y = pageHeight - margin;
+        }
+
+        page.drawText(trimmed, {
+          x,
+          y,
+          size: fontSize + 1,
+          font: boldFont,
+          color: rgb(0, 0, 0),
+        });
+        y -= lineHeight * 1.5;
+      } else {
+        // Resto del texto: justificado
+        const words = trimmed.split(/\s+/);
+        let lineWords: string[] = [];
+        let lineWidth = 0;
+        const spaceWidth = regularFont.widthOfTextAtSize(' ', fontSize);
+
+        for (const word of words) {
+          const wordWidth = regularFont.widthOfTextAtSize(word, fontSize);
+          const estimatedLineWidth = lineWidth + wordWidth + (lineWords.length * spaceWidth);
+
+          if (estimatedLineWidth > maxLineWidth) {
+            if (y < usableBottomY + lineHeight) {
+              page = pdfDoc.addPage([pageWidth, pageHeight]);
+              y = pageHeight - margin;
+            }
+            drawFormattedLine(page, lineWords, y);
+            y -= lineHeight;
+            lineWords = [];
+            lineWidth = 0;
+          }
+
+          lineWords.push(word);
+          lineWidth += wordWidth;
+        }
+
+        if (lineWords.length > 0) {
+          if (y < usableBottomY + lineHeight) {
+            page = pdfDoc.addPage([pageWidth, pageHeight]);
+            y = pageHeight - margin;
+          }
+          drawFormattedLine(page, lineWords, y);
+          y -= lineHeight;
+        }
+      }
+
+      y -= lineHeight / 2;
+    }
+  };
+
+  // Función para dibujar texto para la pagina de indices
+  const drawTextIndex = (page: PDFPage, text: string): void => {
+    let y = usableTopY;
     const paragraphs = text.split('\n');
 
     for (const paragraph of paragraphs) {
@@ -174,8 +264,6 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
         if (y < usableBottomY + lineHeight) {
           page = pdfDoc.addPage([pageWidth, pageHeight]);
           y = pageHeight - margin;
-          await drawHeader(page);
-          await drawFooter(page, pdfDoc.getPageCount() - 1, 4);
         }
 
         page.drawText(trimmed, {
@@ -200,8 +288,6 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
             if (y < usableBottomY + lineHeight) {
               page = pdfDoc.addPage([pageWidth, pageHeight]);
               y = pageHeight - margin;
-              await drawHeader(page);
-              await drawFooter(page, pdfDoc.getPageCount() - 1, 4);
             }
             drawFormattedLine(page, lineWords, y);
             y -= lineHeight;
@@ -217,8 +303,6 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
           if (y < usableBottomY + lineHeight) {
             page = pdfDoc.addPage([pageWidth, pageHeight]);
             y = pageHeight - margin;
-            await drawHeader(page);
-            await drawFooter(page, pdfDoc.getPageCount() - 1, 4);
           }
           drawFormattedLine(page, lineWords, y);
           y -= lineHeight;
@@ -227,37 +311,79 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
 
       y -= lineHeight / 2;
     }
-
-    return page;
   };
 
-  const drawFormattedLine = (page: PDFPage, words: string[], yLine: number): void => {
-    let x = margin;
-    const spaceWidth = regularFont.widthOfTextAtSize(' ', fontSize);
-    const line = words.join(' ');
-    const colonIndex = line.indexOf(':');
+  // Función para dibujar texto para el cuerpo del documento
+  const drawTextCuerpo = (page: PDFPage, text: string): void => {
+    let y = usableTopY;
+    const paragraphs = text.split('\n');
 
-    if (colonIndex !== -1) {
-      const before = line.substring(0, colonIndex).trim();
-      const after = line.substring(colonIndex + 1).trim();
-      const boldText = before + ':';
-      const boldWidth = boldFont.widthOfTextAtSize(boldText, fontSize);
-
-      page.drawText(boldText, { x, y: yLine, size: fontSize, font: boldFont, color: rgb(0, 0, 0) });
-      x += boldWidth + spaceWidth;
-
-      if (after) {
-        page.drawText(after, { x, y: yLine, size: fontSize, font: regularFont, color: rgb(0, 0, 0) });
+    for (const paragraph of paragraphs) {
+      const trimmed = paragraph.trim();
+      if (!trimmed) {
+        y -= lineHeight;
+        continue;
       }
-    } else {
-      for (const word of words) {
-        const width = regularFont.widthOfTextAtSize(word, fontSize);
-        page.drawText(word, { x, y: yLine, size: fontSize, font: regularFont, color: rgb(0, 0, 0) });
-        x += width + spaceWidth;
+
+      const isCentered = centeredBoldPhrases.some(p => trimmed.startsWith(p));
+
+      if (isCentered) {
+        const textWidth = boldFont.widthOfTextAtSize(trimmed, fontSize + 1);
+        const x = (pageWidth - textWidth) / 2;
+
+        if (y < usableBottomY + lineHeight) {
+          page = pdfDoc.addPage([pageWidth, pageHeight]);
+          y = pageHeight - margin;
+        }
+
+        page.drawText(trimmed, {
+          x,
+          y,
+          size: fontSize + 1,
+          font: boldFont,
+          color: rgb(0, 0, 0),
+        });
+        y -= lineHeight * 1.5;
+      } else {
+        const words = trimmed.split(/\s+/);
+        let lineWords: string[] = [];
+        let lineWidth = 0;
+        const spaceWidth = regularFont.widthOfTextAtSize(' ', fontSize);
+
+        for (const word of words) {
+          const wordWidth = regularFont.widthOfTextAtSize(word, fontSize);
+          const estimatedLineWidth = lineWidth + wordWidth + (lineWords.length * spaceWidth);
+
+          if (estimatedLineWidth > maxLineWidth) {
+            if (y < usableBottomY + lineHeight) {
+              page = pdfDoc.addPage([pageWidth, pageHeight]);
+              y = pageHeight - margin;
+            }
+            drawFormattedLine(page, lineWords, y);
+            y -= lineHeight;
+            lineWords = [];
+            lineWidth = 0;
+          }
+
+          lineWords.push(word);
+          lineWidth += wordWidth;
+        }
+
+        if (lineWords.length > 0) {
+          if (y < usableBottomY + lineHeight) {
+            page = pdfDoc.addPage([pageWidth, pageHeight]);
+            y = pageHeight - margin;
+          }
+          drawFormattedLine(page, lineWords, y);
+          y -= lineHeight;
+        }
       }
+
+      y -= lineHeight / 2;
     }
   };
 
+  // Dibuja bloques de texto para la pagina de firmas
   const drawFirmas = (page: PDFPage, firmas: string): void => {
     const lines = firmas.split('\n');
     const startY = pageHeight - headerHeight - margin;
@@ -319,21 +445,62 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
     }
   };
 
+  const drawFormattedLine = (page: PDFPage, words: string[], yLine: number): void => {
+    let x = margin;
+    const spaceWidth = regularFont.widthOfTextAtSize(' ', fontSize);
+    const line = words.join(' ');
+    const colonIndex = line.indexOf(':');
+
+    if (colonIndex !== -1) {
+      const before = line.substring(0, colonIndex).trim();
+      const after = line.substring(colonIndex + 1).trim();
+      const boldText = before + ':';
+      const boldWidth = boldFont.widthOfTextAtSize(boldText, fontSize);
+
+      page.drawText(boldText, { x, y: yLine, size: fontSize, font: boldFont, color: rgb(0, 0, 0) });
+      x += boldWidth + spaceWidth;
+
+      if (after) {
+        page.drawText(after, { x, y: yLine, size: fontSize, font: regularFont, color: rgb(0, 0, 0) });
+      }
+    } else {
+      for (const word of words) {
+        const width = regularFont.widthOfTextAtSize(word, fontSize);
+        page.drawText(word, { x, y: yLine, size: fontSize, font: regularFont, color: rgb(0, 0, 0) });
+        x += width + spaceWidth;
+      }
+    }
+  };
+
   // ---- CREAR LAS 4 PAGINAS SEPARADAS ----
 
-  let lastPage = pdfDoc.addPage([pageWidth, pageHeight]);
-  lastPage = await drawTextBlock(lastPage, acta.paginaInicial);
+  // 1. Página Inicial con encabezado y pie
+  const pageInicial = pdfDoc.addPage([pageWidth, pageHeight]);
+  await drawHeader(pageInicial);
+  if (acta.paginaInicial) 
+    drawTextInicial(pageInicial, acta.paginaInicial);
+  await drawFooter(pageInicial, 0, 4);
 
-  lastPage = pdfDoc.addPage([pageWidth, pageHeight]);
-  lastPage = await drawTextBlock(lastPage, acta.indicePuntos);
+  // 2. Página de índices
+  const pageIndex = pdfDoc.addPage([pageWidth, pageHeight]);
+  await drawHeader(pageIndex);
+  if (acta.indicePuntos) 
+    drawTextIndex(pageIndex, acta.indicePuntos);
+  await drawFooter(pageIndex, 1, 4);
 
-  lastPage = pdfDoc.addPage([pageWidth, pageHeight]);
-  lastPage = await drawTextBlock(lastPage, acta.cuerpo);
+  // 3. Página de cuerpo
+  const pageCuerpo = pdfDoc.addPage([pageWidth, pageHeight]);
+  await drawHeader(pageCuerpo);
+  if (acta.cuerpo) 
+    drawTextCuerpo(pageCuerpo, acta.cuerpo);
+  await drawFooter(pageCuerpo, 2, 4);
 
-  lastPage = pdfDoc.addPage([pageWidth, pageHeight]);
-  await drawHeader(lastPage);
-  drawFirmas(lastPage, acta.paginaFirmas);
-  await drawFooter(lastPage, pdfDoc.getPageCount() - 1, pdfDoc.getPageCount());
+  // 4. Página de firmas
+  const pageFirmas = pdfDoc.addPage([pageWidth, pageHeight]);
+  await drawHeader(pageFirmas); 
+  if (acta.paginaFirmas) 
+    drawFirmas(pageFirmas, acta.paginaFirmas);
+  await drawFooter(pageFirmas, 3, 4);
 
   // Guardar y retornar buffer
   const pdfBytes = await pdfDoc.save();

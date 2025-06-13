@@ -40,4 +40,4 @@ para interactuar con la colección 'Actas' en la base de datos.
 */
 
 export const ActaModel =
-  mongoose.models.Acta || mongoose.model<IActa>('Actas', ActaSchema);
+  mongoose.models.Acta || mongoose.model<IActa>('Acta', ActaSchema);
