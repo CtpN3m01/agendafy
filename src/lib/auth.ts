@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'tu-secreto-super-seguro-aqui';
+import { JWT_CONFIG } from './jwt-config';
 
 export interface JWTPayload {
   userId: string;
@@ -11,12 +10,12 @@ export interface JWTPayload {
 
 export class AuthUtil {
   static generateToken(payload: JWTPayload): string {
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+    return jwt.sign(payload, JWT_CONFIG.SECRET, { expiresIn: JWT_CONFIG.EXPIRES_IN });
   }
 
   static verifyToken(token: string): JWTPayload | null {
     try {
-      return jwt.verify(token, JWT_SECRET) as JWTPayload;
+      return jwt.verify(token, JWT_CONFIG.SECRET) as JWTPayload;
     } catch (error) {
       return null;
     }

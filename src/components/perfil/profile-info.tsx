@@ -16,6 +16,40 @@ interface ProfileInfoProps {
   onUpdate: (data: Partial<UserProfile>) => Promise<void>;
 }
 
+// Función utilitaria para formatear fechas
+const formatDate = (date: Date | string | any): string => {
+  try {
+    let dateObj: Date;
+    
+    if (!date) return 'Fecha no disponible';
+    
+    if (date instanceof Date) {
+      dateObj = date;
+    } else if (typeof date === 'string') {
+      dateObj = new Date(date);
+    } else if (typeof date === 'object' && date.$date) {
+      // Handle MongoDB date format
+      dateObj = new Date(date.$date);
+    } else {
+      dateObj = new Date(date);
+    }
+    
+    // Check if the date is valid
+    if (isNaN(dateObj.getTime())) {
+      return 'Fecha no válida';
+    }
+    
+    return dateObj.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error, date);
+    return 'Fecha no disponible';
+  }
+};
+
 export function ProfileInfo({ user, onUpdate }: ProfileInfoProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -197,13 +231,11 @@ export function ProfileInfo({ user, onUpdate }: ProfileInfoProps) {
               rows={3}
             />
           )}
-        </div>
-
-        {/* Información adicional */}
+        </div>        {/* Información adicional */}
         <div className="pt-4 border-t">
           <div className="text-xs text-muted-foreground space-y-1">
-            <p>Cuenta creada: {user.createdAt.toLocaleDateString()}</p>
-            <p>Última actualización: {user.updatedAt.toLocaleDateString()}</p>
+            <p>Cuenta creada: {formatDate(user.createdAt)}</p>
+            <p>Última actualización: {formatDate(user.updatedAt)}</p>
           </div>
         </div>
       </CardContent>

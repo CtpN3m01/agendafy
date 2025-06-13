@@ -8,9 +8,8 @@ convocados, lugar, tipo de reunión, modalidad, agenda y puntos.
 */
 
 export interface IReunion extends Document {
-  _id: mongoose.Types.ObjectId;
   titulo: string;
-  organizacion: mongoose.Types.ObjectId; // Cambiado a referencia de Organizacion
+  organizacion: mongoose.Types.ObjectId;
   hora_inicio: Date;
   hora_fin: Date;
   archivos: string[];
@@ -18,8 +17,7 @@ export interface IReunion extends Document {
   lugar: string;
   tipo_reunion: 'Extraordinaria' | 'Ordinaria';
   modalidad: 'Presencial' | 'Virtual';
-  agenda: string;
-  puntos: mongoose.Types.ObjectId[];
+  agenda: mongoose.Types.ObjectId; 
 }
 
 /*
@@ -28,9 +26,8 @@ Incluye los campos requeridos y sus tipos de datos.
 */
 
 const ReunionSchema = new Schema<IReunion>({
-  _id: { type: Schema.Types.ObjectId, required: true },
   titulo: { type: String, required: true },
-  organizacion: { type: Schema.Types.ObjectId, ref: 'Organizacion', required: true }, // Actualizado
+  organizacion: { type: Schema.Types.ObjectId, ref: 'Organizacion', required: true },
   hora_inicio: { type: Date, required: true },
   hora_fin: { type: Date, required: false },
   archivos: { type: [String], default: [] },
@@ -46,8 +43,7 @@ const ReunionSchema = new Schema<IReunion>({
     enum: ['Presencial', 'Virtual'],
     required: true,
   },
-  agenda: { type: String, required: true },
-  puntos: [{ type: Schema.Types.ObjectId, ref: 'Punto', default: [] }], 
+  agenda: { type: Schema.Types.ObjectId, required: true },
 });
 
 /*
@@ -56,4 +52,4 @@ para interactuar con la colección 'Reuniones' en la base de datos.
 */
 
 export const ReunionModel =
-  mongoose.models.Reunion || mongoose.model<IReunion>('Reuniones', ReunionSchema);
+  mongoose.models.Reunion || mongoose.model<IReunion>('Reunion', ReunionSchema);

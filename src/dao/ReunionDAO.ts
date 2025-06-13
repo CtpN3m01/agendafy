@@ -1,4 +1,5 @@
 import { ReunionModel, IReunion } from '@/models/Reunion';
+import { isValidObjectId } from '@/lib/validation';
 
 /* 
 DAO es responsable de acceder a los datos de una base de datos. 
@@ -14,9 +15,11 @@ export class ReunionDAO {
 
   async findAll() {
     return ReunionModel.find().exec();
-  }
-
-  async findByOrganizacion(organizacionId: string) {
+  }  async findByOrganizacion(organizacionId: string) {
+    // Validar que el organizacionId sea un ObjectId válido
+    if (!isValidObjectId(organizacionId)) {
+      throw new Error('ID de organización inválido');
+    }
     return ReunionModel.find({ organizacion: organizacionId }).exec();
   }
 
@@ -28,5 +31,9 @@ export class ReunionDAO {
 
   async updateById(id: string, updateData: Partial<IReunion>) {
     return ReunionModel.findByIdAndUpdate(id, updateData, { new: true });
+  }
+
+  async findById(id: string) {
+    return ReunionModel.findById(id).exec();
   }
 }

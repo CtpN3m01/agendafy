@@ -80,25 +80,21 @@ function AppSidebar({ config, onLogout }: { config: SidebarConfig; onLogout?: ()
         ))}
       </SidebarContent>      <SidebarFooter>
         <SidebarMenu>
-          {!isLoading && (user || config.user) && (
+          {!isLoading && user && (
             <SidebarMenuItem>
               <div className="flex items-center gap-2 px-2 py-1.5">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    {user ? 
-                      `${user.nombre?.charAt(0) || ''}${user.apellidos?.charAt(0) || ''}`.toUpperCase() ||
-                      user.nombreUsuario?.slice(0, 2).toUpperCase() || 'U'
-                      : 
-                      config.user?.initials || config.user?.name.slice(0, 2).toUpperCase()
-                    }
+                    {`${user.nombre?.charAt(0) || ''}${user.apellidos?.charAt(0) || ''}`.toUpperCase() ||
+                     user.nombreUsuario?.slice(0, 2).toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left text-sm">
                   <div className="font-medium">
-                    {user ? `${user.nombre} ${user.apellidos}` : config.user?.name}
+                    {`${user.nombre} ${user.apellidos}`}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {user ? user.correo : config.user?.email}
+                    {user.correo}
                   </div>
                 </div>
               </div>

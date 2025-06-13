@@ -13,7 +13,12 @@ export interface IUsuario extends Document {
   contrasena: string;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
-  isActive: boolean;
+  isActive: boolean;  // Campos adicionales de perfil
+  telefono?: string;
+  posicion?: string;
+  departamento?: string;
+  biografia?: string;
+  avatar?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,7 +38,12 @@ const UsuarioSchema = new Schema<IUsuario>({
   contrasena: { type: String, required: true },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
-  isActive: { type: Boolean, default: true },
+  isActive: { type: Boolean, default: true },  // Campos adicionales de perfil
+  telefono: { type: String },
+  posicion: { type: String },
+  departamento: { type: String },
+  biografia: { type: String },
+  avatar: { type: String },
 }, {
   timestamps: true
 });

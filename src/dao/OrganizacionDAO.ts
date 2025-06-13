@@ -3,6 +3,7 @@ import { OrganizacionModel, IOrganizacion } from '@/models/Organizacion';
 import '@/models/Usuario'; // Asegurar que el modelo Usuario esté registrado
 import '@/models/Persona'; // Asegurar que el modelo Persona esté registrado
 import '@/models/Reunion'; // Asegurar que el modelo Reunion esté registrado
+import '@/models/Punto'; // Asegurar que el modelo Punto esté registrado
 import { CrearOrganizacionDTO, OrganizacionResponseDTO, ActualizarOrganizacionDTO } from '@/types/OrganizacionDTO';
 import { connectToDatabase } from '@/lib/mongodb';
 
@@ -21,13 +22,13 @@ export interface IOrganizacionDAO {
   actualizarOrganizacion(id: string, datos: ActualizarOrganizacionDTO): Promise<OrganizacionResponseDTO | null>;
   eliminarOrganizacion(id: string): Promise<boolean>;
   agregarMiembro(organizacionId: string, personaId: string): Promise<void>;
-  removerMiembro(organizacionId: string, personaId: string): Promise<void>;
+  eliminarMiembro(organizacionId: string, personaId: string): Promise<void>;
   agregarReunion(organizacionId: string, reunionId: string): Promise<void>;
 }
 
 export class OrganizacionDAOImpl implements IOrganizacionDAO {
   async crearOrganizacion(organizacionData: CrearOrganizacionDTO): Promise<OrganizacionResponseDTO> {
-    await connectToDatabase();
+    
     
     const organizacion = new OrganizacionModel({
       nombre: organizacionData.nombre,
@@ -49,7 +50,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   }
 
   async buscarPorId(id: string): Promise<OrganizacionResponseDTO | null> {
-    await connectToDatabase();
+    
     const organizacion = await OrganizacionModel.findById(id)
       .populate('usuario', 'nombre correo')
       .populate('miembros', 'nombre apellidos correo rol')
@@ -60,7 +61,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   }
 
   async buscarPorUsuario(usuarioId: string): Promise<OrganizacionResponseDTO[]> {
-    await connectToDatabase();
+    
     const organizaciones = await OrganizacionModel.find({ 
       usuario: usuarioId,
       isActive: true 
@@ -74,7 +75,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   }
 
   async buscarPorNombre(nombre: string): Promise<IOrganizacion | null> {
-    await connectToDatabase();
+    
     return await OrganizacionModel.findOne({ 
       nombre: { $regex: new RegExp(`^${nombre}$`, 'i') },
       isActive: true 
@@ -82,7 +83,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   }
 
   async buscarPorCorreo(correo: string): Promise<IOrganizacion | null> {
-    await connectToDatabase();
+    
     return await OrganizacionModel.findOne({ 
       correo: correo.toLowerCase(),
       isActive: true 
@@ -90,7 +91,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   }
 
   async actualizarOrganizacion(id: string, datos: ActualizarOrganizacionDTO): Promise<OrganizacionResponseDTO | null> {
-    await connectToDatabase();
+    
     const organizacion = await OrganizacionModel.findByIdAndUpdate(
       id, 
       datos, 
@@ -105,46 +106,60 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
   }
 
   async eliminarOrganizacion(id: string): Promise<boolean> {
-    await connectToDatabase();
     
-    // ELIMINACIÓN FÍSICA - borra completamente el registro
+    
     const result = await OrganizacionModel.findByIdAndDelete(id).exec();
     
     return !!result;
   }
 
   async agregarMiembro(organizacionId: string, personaId: string): Promise<void> {
-    await connectToDatabase();
+    
     await OrganizacionModel.findByIdAndUpdate(
       organizacionId,
       { $addToSet: { miembros: personaId } }
     ).exec();
   }
 
-  async removerMiembro(organizacionId: string, personaId: string): Promise<void> {
-    await connectToDatabase();
+  // Eliminar miembro de la organización (solo del array miembros)
+  async eliminarMiembro(organizacionId: string, miembroId: string): Promise<void> {
     await OrganizacionModel.findByIdAndUpdate(
       organizacionId,
-      { $pull: { miembros: personaId } }
+      { 
+        $pull: { miembros: miembroId } // Solo remover del array, no eliminar el documento
+      },
+      { new: true }
     ).exec();
   }
 
   async agregarReunion(organizacionId: string, reunionId: string): Promise<void> {
-    await connectToDatabase();
+    
     await OrganizacionModel.findByIdAndUpdate(
       organizacionId,
       { $addToSet: { reuniones: reunionId } }
     ).exec();
-  }
+  }  private mapearAResponse(organizacion: any): OrganizacionResponseDTO {
+    // Convertir logo a base64 solo si no es muy grande (máximo 500KB en base64)
+    let logoBase64: string | undefined;
+    if (organizacion.logo) {
+      const logoSize = organizacion.logo.length;
+      // Si el logo es menor a 500KB, convertir a base64
+      if (logoSize <= 500 * 1024) {
+        logoBase64 = `data:image/jpeg;base64,${organizacion.logo.toString('base64')}`;
+      } else {
+        console.warn(`Logo demasiado grande para conversión a base64: ${logoSize} bytes`);
+        // Usar endpoint de imagen para logos grandes
+        logoBase64 = `/api/mongo/Organizacion/logo?id=${organizacion._id}`;
+      }
+    }
 
-  private mapearAResponse(organizacion: any): OrganizacionResponseDTO {
     return {
       id: organizacion._id.toString(),
       nombre: organizacion.nombre,
       correo: organizacion.correo,
       telefono: organizacion.telefono,
       direccion: organizacion.direccion,
-      logo: organizacion.logo ? organizacion.logo.toString('base64') : undefined, 
+      logo: logoBase64,
       usuario: {
         id: organizacion.usuario?._id?.toString() || organizacion.usuario,
         nombre: organizacion.usuario?.nombre || '',
