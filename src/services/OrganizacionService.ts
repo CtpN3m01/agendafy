@@ -236,11 +236,13 @@ export class OrganizacionService {
       };
     }
   }
-
   // Obtiene los miembros de la junta directiva de una organización
   async obtenerMiembrosJunta(id: string): Promise<Array<{
+    _id: string;
     nombre: string;
+    apellidos: string;
     correo: string;
+    rol: string;
     esMiembro: boolean;
   }> | null> {
     try {
@@ -249,11 +251,13 @@ export class OrganizacionService {
       if (!organizacion) {
         return null;
       }
-
       // Mapear los miembros al formato requerido
       const miembrosJunta = organizacion.miembros.map(miembro => ({
-        nombre: `${miembro.nombre} ${miembro.apellidos}`.trim(),
+        _id: miembro.id,
+        nombre: miembro.nombre,
+        apellidos: miembro.apellidos,
         correo: miembro.correo,
+        rol: miembro.rol,
         esMiembro: true
       }));
 
@@ -309,7 +313,7 @@ export class OrganizacionService {
           nombre: datos.nombre,
           apellidos: datos.apellidos,
           correo: datos.correo.toLowerCase(),
-          rol: datos.rol || 'Miembro',
+          rol: datos.rol || 'Vocal',
           organizacion: organizacionId // ← Asegurar que tiene la organización
         }).exec();
 
@@ -324,17 +328,17 @@ export class OrganizacionService {
             nombre: datos.nombre,
             apellidos: datos.apellidos,
             correo: datos.correo.toLowerCase(),
-            rol: datos.rol || 'Miembro',
+            rol: datos.rol || 'Vocal',
             esMiembro: true
           }
         };
-      } else {
+      } else {        
         // Crear nueva persona
         const nuevaPersona = new PersonaModel({
           nombre: datos.nombre,
           apellidos: datos.apellidos,
           correo: datos.correo.toLowerCase(),
-          rol: datos.rol || 'Miembro',
+          rol: datos.rol || 'Vocal',
           organizacion: organizacionId
         });
 
@@ -495,24 +499,23 @@ export class OrganizacionService {
           message: 'Miembro no encontrado',
           errors: { general: ['El miembro no existe en la base de datos'] }
         };
-      }
-
-      // Guardar datos del miembro para la respuesta
+      }      // Guardar datos del miembro para la respuesta
       const datosEliminado = {
         id: miembro._id.toString(),
         nombre: miembro.nombre,
         apellidos: miembro.apellidos,
         correo: miembro.correo,
         rol: miembro.rol
-      };
-
-      // SOFT DELETE - Solo eliminar del array miembros de la organización
-      // NO eliminar el registro de PersonaModel
+      };      // HARD DELETE - Eliminar el miembro de la organización Y de la colección Persona
       await this.organizacionDAO.eliminarMiembro(organizacionId, miembroId);
+      
+      // Eliminar también el registro de la colección Persona
+      const personaEliminada = await PersonaModel.findByIdAndDelete(miembroId).exec();
+      console.log('Persona eliminada de la colección:', personaEliminada ? 'Sí' : 'No encontrada');
 
       return {
         success: true,
-        message: 'Miembro removido de la junta directiva exitosamente',
+        message: 'Miembro eliminado completamente de la junta directiva y del sistema',
         miembroEliminado: datosEliminado
       };
 

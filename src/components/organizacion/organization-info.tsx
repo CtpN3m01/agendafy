@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Building, Users, Calendar, Settings, Mail, Phone, MapPin } from "lucide-react";
 import { OrganizationLogo } from "./organization-logo";
+import { BoardMembersTable } from "./board-members-table";
 
 interface OrganizationData {
   id: string;
@@ -116,10 +117,13 @@ export function OrganizationInfo({ organization }: OrganizationInfoProps) {
                 <p className="text-xs text-muted-foreground">{organization.direccion}</p>
               </div>
             </div>
-          </CardContent>
+          </CardContent>        
         </Card>
 
       </div>
+
+      {/* Tabla de Miembros de la Junta */}
+      <BoardMembersTable organizationId={organization.id} />
     </div>
   );
 }

@@ -29,7 +29,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         details: 'El ID debe ser un ObjectId válido de MongoDB (24 caracteres hexadecimales)'
       });
     }
-
     const organizacionService = new OrganizacionService();
     const miembros = await organizacionService.obtenerMiembrosJunta(id);
 
@@ -39,6 +38,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         message: 'Organización no encontrada'
       });
     }
+
+    // Agregar headers para evitar caché
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
 
     return res.status(200).json({
       success: true,
