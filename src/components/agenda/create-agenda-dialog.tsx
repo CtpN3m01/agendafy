@@ -37,13 +37,20 @@ import {
 } from "lucide-react";
 import { useAgendas, usePuntos } from "@/hooks/use-agendas";
 
+interface ConvocadoData {
+  nombre: string;
+  correo: string;
+  esMiembro: boolean;
+}
+
 interface PuntoFormData {
   id: string;
   titulo: string;
   tipo: "Informativo" | "Aprobacion" | "Fondo";
   duracion: number;
   expositor: string;
-  comentarios?: string;
+  detalles?: string;
+  anotaciones?: string;
   archivos?: string[]; // IDs de archivos asociados
 }
 
@@ -57,6 +64,7 @@ interface CreateAgendaDialogProps {
   agendaToEdit?: any; // Agenda a editar
   open?: boolean; // Control externo del diálogo
   onOpenChange?: (open: boolean) => void; // Callback para cambio de estado
+  convocados?: ConvocadoData[]; // Lista de convocados disponibles
 }
 
 export function CreateAgendaDialog({ 
@@ -68,7 +76,8 @@ export function CreateAgendaDialog({
   editMode = false,
   agendaToEdit,
   open: externalOpen,
-  onOpenChange: externalOnOpenChange
+  onOpenChange: externalOnOpenChange,
+  convocados = [] // Add the missing convocados prop with default value
 }: CreateAgendaDialogProps) {
   const { createAgendaWithPuntos, updateAgenda, getAgenda, getPuntosByAgenda } = useAgendas();
   const { createPunto: createPuntoAPI, updatePunto: updatePuntoAPI, deletePunto: deletePuntoAPI } = usePuntos();
@@ -126,7 +135,8 @@ export function CreateAgendaDialog({
             tipo: punto.tipo,
             duracion: punto.duracion,
             expositor: punto.expositor,
-            comentarios: punto.comentarios || "",
+            detalles: punto.detalles || "",
+            anotaciones: punto.anotaciones || "",
             archivos: punto.archivos || [],
           }));
           setPuntos(puntosFormData);
@@ -257,7 +267,8 @@ export function CreateAgendaDialog({
             tipo: punto.tipo,
             duracion: punto.duracion,
             expositor: punto.expositor,
-            comentarios: punto.comentarios || "",
+            detalles: punto.detalles || "",
+            anotaciones: punto.anotaciones || "",
             archivos: punto.archivos || [],
             agenda: agendaToEdit._id
           };
@@ -275,7 +286,8 @@ export function CreateAgendaDialog({
               tipo: punto.tipo,
               duracion: punto.duracion,
               expositor: punto.expositor,
-              comentarios: punto.comentarios || "",
+              detalles: punto.detalles || "",
+              anotaciones: punto.anotaciones || "",
               archivos: punto.archivos || [],
             };
             
@@ -306,7 +318,8 @@ export function CreateAgendaDialog({
       original.tipo !== current.tipo ||
       original.duracion !== current.duracion ||
       original.expositor !== current.expositor ||
-      original.comentarios !== current.comentarios ||
+      original.detalles !== current.detalles ||
+      original.anotaciones !== current.anotaciones ||
       JSON.stringify(original.archivos) !== JSON.stringify(current.archivos)
     );
   };
@@ -380,7 +393,8 @@ export function CreateAgendaDialog({
           tipo: punto.tipo,
           duracion: punto.duracion,
           expositor: punto.expositor,
-          comentarios: punto.comentarios || "",
+          detalles: punto.detalles || "",
+          anotaciones: punto.anotaciones || "",
           archivos: punto.archivos || [],
         }));
 
@@ -569,18 +583,52 @@ export function CreateAgendaDialog({
 
                         <div className="space-y-2">
                           <Label>Expositor</Label>
-                          <Input
-                            value={punto.expositor}
-                            onChange={(e) => updatePunto(punto.id, { expositor: e.target.value })}
-                            placeholder="Nombre del expositor"
-                          />
+                          {convocados && convocados.length > 0 ? (
+                            <Select
+                              value={punto.expositor}
+                              onValueChange={(value) => updatePunto(punto.id, { expositor: value })}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Selecciona un expositor" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {convocados.map((convocado, index) => (
+                                  <SelectItem 
+                                    key={index} 
+                                    value={convocado.nombre}
+                                    className="cursor-pointer py-3"
+                                  >
+                                    <div className="flex flex-col items-start w-full">
+                                      <span className="font-medium text-sm leading-tight">{convocado.nombre}</span>
+                                      <span className="text-xs text-muted-foreground leading-tight">{convocado.correo}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              value={punto.expositor}
+                              onChange={(e) => updatePunto(punto.id, { expositor: e.target.value })
+                              }
+                              placeholder="Nombre del expositor"
+                            />
+                          )}
                         </div>
                       </div><div className="space-y-2">
-                        <Label>Comentarios (opcional)</Label>
+                        <Label>Detalles</Label>
                         <Textarea
-                          value={punto.comentarios || ""}
-                          onChange={(e) => updatePunto(punto.id, { comentarios: e.target.value })}
-                          placeholder="Comentarios adicionales..."
+                          value={punto.detalles || ""}
+                          onChange={(e) => updatePunto(punto.id, { detalles: e.target.value })}
+                          placeholder="Detalles adicionales..."
+                          rows={2}
+                        />
+                      </div><div className="space-y-2">
+                        <Label>Anotaciones</Label>
+                        <Textarea
+                          value={punto.anotaciones || ""}
+                          onChange={(e) => updatePunto(punto.id, { anotaciones: e.target.value })}
+                          placeholder="Anotaciones adicionales..."
                           rows={2}
                         />
                       </div>                      

@@ -27,7 +27,8 @@ interface PuntoData {
   titulo: string;
   tipo: "Informativo" | "Aprobacion" | "Fondo";
   duracion: number;
-  comentarios?: string;
+  detalles: string;
+  anotaciones?: string;
   expositor: string;
   archivos?: string[];
   votosAFavor?: number;

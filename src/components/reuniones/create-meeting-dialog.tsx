@@ -26,6 +26,7 @@ import { CalendarDays, Clock, Users, Upload, Share2, Plus, FileText, X, Copy, Ed
 import { useMeetings } from "@/hooks/use-meetings";
 import { useAgendas } from "@/hooks/use-agendas";
 import { useUserOrganization } from "@/hooks/use-user-organization";
+import { useBoardMembers } from "@/hooks/use-board-members";
 import { CreateAgendaDialog } from "@/components/agenda";
 
 interface CreateMeetingDialogProps {
@@ -35,34 +36,7 @@ interface CreateMeetingDialogProps {
   organizacionId?: string;
 }
 
-// Mock data para miembros - estos deberían venir de APIs reales
-const availableMembers = [
-  { id: "1", nombre: "Juan Pérez", email: "juan@company.com" },
-  { id: "2", nombre: "María González", email: "maria@company.com" },
-  { id: "3", nombre: "Carlos Rodríguez", email: "carlos@company.com" },
-  { id: "4", nombre: "Ana López", email: "ana@company.com" },
-];
-
 // Componentes memorizados para mejor rendimiento
-const MemberBadge = React.memo(({ member, onRemove }: { member: any, onRemove: (id: string) => void }) => (
-  <Badge
-    variant="secondary"
-    className="flex items-center justify-between gap-1 p-2 max-w-none"
-  >
-    <div className="flex flex-col items-start min-w-0 flex-1">
-      <span className="text-xs font-medium truncate w-full">{member.nombre}</span>
-      <span className="text-xs text-muted-foreground truncate w-full">{member.email}</span>
-    </div>
-    <button
-      type="button"
-      onClick={() => onRemove(member.id)}
-      className="text-red-500 hover:text-red-700 flex-shrink-0"
-    >
-      <X className="h-3 w-3" />
-    </button>
-  </Badge>
-));
-
 const FileBadge = React.memo(({ file, index, onRemove }: { file: File, index: number, onRemove: (index: number) => void }) => (
   <div className="flex items-center justify-between bg-gray-50 p-2 rounded-md">
     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -96,10 +70,14 @@ export function CreateMeetingDialog({
     organizacionId || organization?.id || "", 
     [organizacionId, organization?.id]
   );
-  
-  // Hook para manejar agendas - solo cargar cuando el diálogo esté abierto
+    // Hook para manejar agendas - solo cargar cuando el diálogo esté abierto
   const { agendas, isLoading: agendasLoading, refetch: refetchAgendas } = useAgendas(
     open ? currentOrganizationId : undefined
+  );
+  
+  // Hook para obtener miembros de la junta
+  const { members: boardMembers, isLoading: membersLoading } = useBoardMembers(
+    open ? currentOrganizationId : null
   );
   
   const [isLoading, setIsLoading] = useState(false);
@@ -111,12 +89,11 @@ export function CreateMeetingDialog({
   const [formData, setFormData] = useState({
     titulo: "",
     agendaSeleccionada: "",
-    miembrosConvocados: [] as string[],
+    listaConvocados: [] as string[],
     archivos: [] as File[],
     linkInvitacion: "",
     hora: "07",
     minutos: "00", 
-    amPm: "AM",
     fecha: "",
     organizacion: currentOrganizationId,
     tipoReunion: "Ordinaria" as "Extraordinaria" | "Ordinaria",
@@ -148,20 +125,27 @@ export function CreateMeetingDialog({
       newErrors.hora = "La hora es requerida";
     }
 
+    if (!formData.agendaSeleccionada) {
+      newErrors.agenda = "La agenda es requerida";
+    }
+
+    if (!formData.lugar.trim()) {
+      newErrors.lugar = "El lugar es requerido";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData.titulo, formData.fecha, formData.hora]);
+  }, [formData.titulo, formData.fecha, formData.hora, formData.agendaSeleccionada, formData.lugar]);
 
   const resetForm = useCallback(() => {
     setFormData({
       titulo: "",
       agendaSeleccionada: "",
-      miembrosConvocados: [],      
+      listaConvocados: [],      
       archivos: [],
       linkInvitacion: "",
       hora: "07",
       minutos: "00",
-      amPm: "AM",
       fecha: "",
       organizacion: currentOrganizationId,
       tipoReunion: "Ordinaria" as "Extraordinaria" | "Ordinaria",
@@ -201,10 +185,10 @@ export function CreateMeetingDialog({
 
   const addMember = useCallback((memberId: string) => {
     setFormData(prev => {
-      if (!prev.miembrosConvocados.includes(memberId)) {
+      if (!prev.listaConvocados.includes(memberId)) {
         return {
           ...prev,
-          miembrosConvocados: [...prev.miembrosConvocados, memberId]
+          listaConvocados: [...prev.listaConvocados, memberId]
         };
       }
       return prev;
@@ -214,7 +198,7 @@ export function CreateMeetingDialog({
   const removeMember = useCallback((memberId: string) => {
     setFormData(prev => ({
       ...prev,
-      miembrosConvocados: prev.miembrosConvocados.filter(id => id !== memberId)
+      listaConvocados: prev.listaConvocados.filter(id => id !== memberId)
     }));
   }, []);
 
@@ -239,10 +223,6 @@ export function CreateMeetingDialog({
     setFormData(prev => ({ ...prev, minutos: value }));
   }, []);
 
-  const handleAmPmChange = useCallback((value: string) => {
-    setFormData(prev => ({ ...prev, amPm: value }));
-  }, []);
-
   const handleTipoReunionChange = useCallback((value: string) => {
     setFormData(prev => ({ ...prev, tipoReunion: value as "Extraordinaria" | "Ordinaria" }));
   }, []);
@@ -265,7 +245,8 @@ export function CreateMeetingDialog({
     setIsLoading(true);
     setErrors({});
 
-    try {      const meetingData = {
+    try {
+      const meetingData = {
         titulo: formData.titulo,
         organizacion: currentOrganizationId,
         hora_inicio: `${formData.fecha}T${formData.hora}:${formData.minutos}:00.000Z`,
@@ -273,8 +254,10 @@ export function CreateMeetingDialog({
         tipo_reunion: formData.tipoReunion,
         modalidad: formData.modalidad,
         agenda: formData.agendaSeleccionada,
-        convocados: formData.miembrosConvocados,
+        convocados: formData.listaConvocados,
       };
+
+      console.log('🚀 Iniciando POST para crear reunión:', meetingData);
 
       let success = false;
       if (onCreateMeeting) {
@@ -302,6 +285,31 @@ export function CreateMeetingDialog({
     resetForm();
     onOpenChange(false);
   }, [resetForm, onOpenChange]);
+
+  // Convertir listaConvocados a objetos para pasarlos al CreateAgendaDialog
+  const convocadosData = useMemo(() => {
+    if (!Array.isArray(formData.listaConvocados)) return [];
+    
+    // Si listaConvocados son IDs (strings), convertir usando boardMembers
+    if (formData.listaConvocados.length > 0 && typeof formData.listaConvocados[0] === 'string') {
+      return formData.listaConvocados.map(memberId => {
+        const member = boardMembers.find(m => m._id === memberId);
+        if (member) {
+          return {
+            nombre: `${member.nombre} ${member.apellidos}`,
+            correo: member.correo,
+            esMiembro: true
+          };
+        }
+        return null;
+      }).filter(Boolean) as Array<{ nombre: string; correo: string; esMiembro: boolean }>;
+    }
+    
+    // Si ya son objetos, devolverlos tal como están
+    return formData.listaConvocados.filter(item => 
+      typeof item === 'object' && item !== null && 'nombre' in item
+    ) as Array<{ nombre: string; correo: string; esMiembro: boolean }>;
+  }, [formData.listaConvocados, boardMembers]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -341,144 +349,59 @@ export function CreateMeetingDialog({
             )}
           </div>
 
-          {/* Agenda */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Agenda
-            </Label>
-            <div className="flex gap-2">
-              <Select
-                value={formData.agendaSeleccionada}
-                onValueChange={handleAgendaChange}
-                disabled={agendasLoading}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder={
-                    agendasLoading 
-                      ? "Cargando agendas..." 
-                      : agendas.length === 0 
-                        ? "No hay agendas disponibles"
-                        : "Selecciona una agenda"
-                  } />
-                </SelectTrigger>
-                <SelectContent>
-                  {agendas.map((agenda) => (
-                    <SelectItem key={agenda._id} value={agenda._id}>
-                      {agenda.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>              
-              
-              {/* Botón para editar agenda seleccionada */}
-              {formData.agendaSeleccionada && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => {
-                    const selectedAgenda = agendas.find(a => a._id === formData.agendaSeleccionada);
-                    if (selectedAgenda) {
-                      setEditingAgenda(selectedAgenda);
-                      setEditDialogOpen(true);
-                    }
-                  }}
-                  title="Editar agenda seleccionada"
-                >
-                  <Edit3 className="h-4 w-4" />
-                </Button>
-              )}
-              
-              {/* Botón para crear nueva agenda */}
-              <CreateAgendaDialog
-                organizacionId={currentOrganizationId}
-                availableFiles={formData.archivos}
-                onAgendaCreated={(agenda) => {
-                  refetchAgendas();
-                  setFormData(prev => ({ ...prev, agendaSeleccionada: agenda._id }));
-                }}
-                trigger={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    title="Crear nueva agenda"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                }
-              />
-            </div>
-            {formData.agendaSeleccionada && (
-              <div className="text-xs text-muted-foreground">
-                Agenda seleccionada: {agendas.find(a => a._id === formData.agendaSeleccionada)?.nombre}
-              </div>
-            )}
-          </div>
-
-          {/* Diálogo de Edición de Agenda */}
-          {editingAgenda && (
-            <CreateAgendaDialog
-              organizacionId={currentOrganizationId}
-              availableFiles={formData.archivos}
-              editMode={true}
-              agendaToEdit={editingAgenda}
-              open={editDialogOpen}
-              onOpenChange={setEditDialogOpen}
-              onAgendaUpdated={(agenda) => {
-                refetchAgendas();
-                setEditDialogOpen(false);
-                setEditingAgenda(null);
-              }}
-            />
-          )}
-
-          {/* Miembros Convocados */}
+        {/* Miembros Convocados */}
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Miembros convocados
+              Personas convocadas
+              {formData.listaConvocados.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  ({formData.listaConvocados.length} seleccionados)
+                </span>
+              )}
             </Label>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-              {availableMembers.map((member) => (
-                <Button
-                  key={member.id}
-                  type="button"
-                  variant={formData.miembrosConvocados.includes(member.id) ? "secondary" : "outline"}
-                  size="sm"
-                  className="justify-start text-xs h-auto py-2"
-                  onClick={() => {
-                    if (formData.miembrosConvocados.includes(member.id)) {
-                      removeMember(member.id);
-                    } else {
-                      addMember(member.id);
-                    }
-                  }}
-                >
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">{member.nombre}</span>
-                    <span className="text-muted-foreground">{member.email}</span>
-                  </div>
-                </Button>
-              ))}
+              {membersLoading ? (
+                <div className="col-span-full text-center text-sm text-muted-foreground">
+                  Cargando miembros...
+                </div>
+              ) : boardMembers.length === 0 ? (
+                <div className="col-span-full text-center text-sm text-muted-foreground">
+                  No hay miembros registrados en la organización
+                </div>
+              ) : (
+                boardMembers.map((member) => {
+                  const isSelected = formData.listaConvocados.includes(member._id);
+                  return (
+                    <Button
+                      key={member._id}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      className={`justify-start text-xs h-auto py-2 transition-all duration-200 ${
+                        isSelected 
+                          ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600" 
+                          : "hover:bg-gray-50"
+                      }`}
+                      onClick={() => {
+                        if (isSelected) {
+                          removeMember(member._id);
+                        } else {
+                          addMember(member._id);
+                        }
+                      }}
+                    >
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{member.nombre} {member.apellidos}</span>
+                        <span className={isSelected ? "text-blue-100" : "text-muted-foreground"}>
+                          {member.correo}
+                        </span>
+                      </div>
+                    </Button>
+                  );
+                })
+              )}
             </div>
-            
-            {formData.miembrosConvocados.length > 0 && (
-              <div className="space-y-2 mt-2">
-                <div className="text-xs text-muted-foreground">
-                  Miembros seleccionados ({formData.miembrosConvocados.length}):
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
-                  {formData.miembrosConvocados.map((memberId) => {
-                    const member = availableMembers.find(m => m.id === memberId);
-                    return member ? (
-                      <MemberBadge key={memberId} member={member} onRemove={removeMember} />
-                    ) : null;
-                  })}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Archivos */}
@@ -555,8 +478,8 @@ export function CreateMeetingDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => {
-                      const hour = (i + 1).toString().padStart(2, '0');
+                    {Array.from({ length: 24 }, (_, i) => {
+                      const hour = (i).toString().padStart(2, '0');
                       return (
                         <SelectItem key={hour} value={hour}>
                           {hour}
@@ -585,19 +508,10 @@ export function CreateMeetingDialog({
                   </SelectContent>
                 </Select>
                 
-                <Select
-                  value={formData.amPm}
-                  onValueChange={handleAmPmChange}
-                >
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="AM">AM</SelectItem>
-                    <SelectItem value="PM">PM</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
+              {errors.hora && (
+                <p className="text-sm text-red-500">{errors.hora}</p>
+              )}
             </div>
           </div>
 
@@ -645,34 +559,135 @@ export function CreateMeetingDialog({
           {/* Lugar o URL */}
           <div className="space-y-2">
             <Label htmlFor="lugar" className="text-sm font-medium">
-              {formData.modalidad === "Virtual" ? "URL de la reunión" : "Lugar"}
+              {formData.modalidad === "Virtual" ? "URL de la reunión" : "Lugar"} *
             </Label>            
             <Input
               id="lugar"
               value={formData.lugar}
               onChange={handleLugarChange}
               placeholder={formData.modalidad === "Virtual" ? "Enlace de videollamada (ej: https://meet.google.com/...)" : "Dirección o sala de reuniones"}
+              className={errors.lugar ? "border-red-500" : ""}
             />
+            {errors.lugar && (
+              <p className="text-sm text-red-500">{errors.lugar}</p>
+            )}
           </div>
-        </form>
 
-        <DialogFooter>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={handleCancel}
-            disabled={isLoading}
-          >
-            Cancelar
-          </Button>
-          <Button 
-            type="submit" 
-            onClick={handleSubmit}
-            disabled={isLoading || !formData.titulo.trim() || !formData.fecha}
-          >
-            {isLoading ? "Creando..." : "Crear Reunión"}
-          </Button>
-        </DialogFooter>
+          {/* Agenda */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Agenda *
+            </Label>
+            <div className="flex gap-2">
+              <Select
+                value={formData.agendaSeleccionada}
+                onValueChange={handleAgendaChange}
+                disabled={agendasLoading}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder={
+                    agendasLoading 
+                      ? "Cargando agendas..." 
+                      : agendas.length === 0 
+                        ? "No hay agendas disponibles"
+                        : "Selecciona una agenda"
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {agendas.map((agenda) => (
+                    <SelectItem key={agenda._id} value={agenda._id}>
+                      {agenda.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>              
+              
+              {/* Botón para editar agenda seleccionada */}
+              {formData.agendaSeleccionada && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const selectedAgenda = agendas.find(a => a._id === formData.agendaSeleccionada);
+                    if (selectedAgenda) {
+                      setEditingAgenda(selectedAgenda);
+                      setEditDialogOpen(true);
+                    }
+                  }}
+                  title="Editar agenda seleccionada"
+                >
+                  <Edit3 className="h-4 w-4" />
+                </Button>
+              )}
+              
+              {/* Botón para crear nueva agenda */}
+              <CreateAgendaDialog
+                organizacionId={currentOrganizationId}
+                availableFiles={formData.archivos}
+                convocados={convocadosData}
+                onAgendaCreated={(agenda) => {
+                  refetchAgendas();
+                  setFormData(prev => ({ ...prev, agendaSeleccionada: agenda._id }));
+                }}
+                trigger={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    title="Crear nueva agenda"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                }
+              />
+            </div>
+            {formData.agendaSeleccionada && (
+              <div className="text-xs text-muted-foreground">
+                Agenda seleccionada: {agendas.find(a => a._id === formData.agendaSeleccionada)?.nombre}
+              </div>
+            )}
+            {errors.agenda && (
+              <p className="text-sm text-red-500">{errors.agenda}</p>
+            )}
+          </div>
+
+          {/* Diálogo de Edición de Agenda */}
+          {editingAgenda && (
+            <CreateAgendaDialog
+              organizacionId={currentOrganizationId}
+              availableFiles={formData.archivos}
+              convocados={convocadosData}
+              editMode={true}
+              agendaToEdit={editingAgenda}
+              open={editDialogOpen}
+              onOpenChange={setEditDialogOpen}
+              onAgendaUpdated={(agenda) => {
+                refetchAgendas();
+                setEditDialogOpen(false);
+                setEditingAgenda(null);
+              }}
+            />
+          )}
+
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleCancel}
+              disabled={isLoading}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isLoading || !formData.titulo.trim() || !formData.fecha || !formData.agendaSeleccionada}
+            >
+              {isLoading ? "Creando..." : "Crear Reunión"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>  );
 }

@@ -6,6 +6,8 @@
 - [Obtener Punto](#obtener-punto)
 - [Editar Punto](#editar-punto)
 - [Eliminar Punto](#eliminar-punto)
+- [Tipos de Punto](#tipos-de-punto)
+- [Ejemplos de uso por tipo](#ejemplos-de-uso-por-tipo)
 
 ## Crear Punto
 
@@ -16,7 +18,8 @@
   "titulo": "string",
   "tipo": "Informativo" | "Aprobacion" | "Fondo",
   "duracion": number,
-  "comentarios": "string", // opcional
+  "detalles": "string", // opcional
+  "anotaciones": "string", // opcional
   "expositor": "string",
   "archivos": ["string"], // array de URLs, opcional
   "votosAFavor": number, // opcional, para tipo Aprobacion
@@ -33,7 +36,8 @@
   "titulo": "string",
   "tipo": "string",
   "duracion": number,
-  "comentarios": "string",
+  "detalles": "string",
+  "anotaciones": "string",
   "expositor": "string",
   "archivos": ["string"],
   "votosAFavor": number,
@@ -66,7 +70,8 @@
   "titulo": "Aprobación del presupuesto 2024",
   "tipo": "Aprobacion",
   "duracion": 30,
-  "comentarios": "Revisar incremento del 15%",
+  "detalles": "Revisar incremento del 15% respecto al año anterior",
+  "anotaciones": "Considerar factores de inflación",
   "expositor": "Juan Pérez",
   "archivos": ["https://example.com/presupuesto.pdf"],
   "votosAFavor": 0,
@@ -86,7 +91,8 @@
   "titulo": "string",
   "tipo": "string",
   "duracion": number,
-  "comentarios": "string",
+  "detalles": "string",
+  "anotaciones": "string",
   "expositor": "string",
   "archivos": ["string"],
   "votosAFavor": number,
@@ -126,7 +132,8 @@
   "titulo": "string", // opcional
   "tipo": "Informativo" | "Aprobacion" | "Fondo", // opcional
   "duracion": number, // opcional
-  "comentarios": "string", // opcional
+  "detalles": "string", // opcional
+  "anotaciones": "string", // opcional
   "expositor": "string", // opcional
   "archivos": ["string"], // opcional
   "votosAFavor": number, // opcional
@@ -144,7 +151,8 @@
     "titulo": "string",
     "tipo": "string",
     "duracion": number,
-    "comentarios": "string",
+    "detalles": "string",
+    "anotaciones": "string",
     "expositor": "string",
     "archivos": ["string"],
     "votosAFavor": number,
@@ -224,17 +232,17 @@
 
 ### Informativo
 - Solo requiere: `titulo`, `tipo`, `duracion`, `expositor`, `agenda`
-- Campos opcionales: `comentarios`, `archivos`
+- Campos opcionales: `detalles`, `anotaciones`, `archivos`
 
 ### Aprobacion
 - Requiere: `titulo`, `tipo`, `duracion`, `expositor`, `agenda`
 - Campos específicos: `votosAFavor`, `votosEnContra`
-- Campos opcionales: `comentarios`, `archivos`
+- Campos opcionales: `detalles`, `anotaciones`, `archivos`
 
 ### Fondo
 - Requiere: `titulo`, `tipo`, `duracion`, `expositor`, `agenda`
 - Campos específicos: `decisiones` (array de strings)
-- Campos opcionales: `comentarios`, `archivos`
+- Campos opcionales: `detalles`, `anotaciones`, `archivos`
 
 ## Ejemplos de uso por tipo
 
@@ -244,6 +252,8 @@
   "titulo": "Informe de actividades trimestrales",
   "tipo": "Informativo",
   "duracion": 15,
+  "detalles": "Presentación de resultados del Q3",
+  "anotaciones": "Incluir métricas de satisfacción",
   "expositor": "María García",
   "agenda": "675a1b2c3d4e5f6789012345"
 }
@@ -255,6 +265,8 @@
   "titulo": "Aprobación del nuevo reglamento",
   "tipo": "Aprobacion",
   "duracion": 45,
+  "detalles": "Votación sobre las nuevas políticas de trabajo remoto",
+  "anotaciones": "Revisar impacto en productividad",
   "expositor": "Carlos López",
   "votosAFavor": 0,
   "votosEnContra": 0,
@@ -268,6 +280,8 @@
   "titulo": "Restructuración organizacional",
   "tipo": "Fondo",
   "duracion": 60,
+  "detalles": "Análisis de la nueva estructura departamental",
+  "anotaciones": "Considerar impacto en costos operativos",
   "expositor": "Ana Martínez",
   "decisiones": [],
   "agenda": "675a1b2c3d4e5f6789012345"

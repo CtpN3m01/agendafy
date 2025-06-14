@@ -10,7 +10,8 @@ para crear un punto en una agenda.
 
 interface PuntoData {
   titulo: string;
-  comentarios: string;
+  detalles: string;
+  anotaciones?: string;
   duracion: number;
   tipo: TipoPunto;
   votosAFavor?: number;

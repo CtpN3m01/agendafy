@@ -28,9 +28,10 @@ interface BoardMemberFormProps {
 
 const roles = [
   { value: 'Presidente', label: 'Presidente' },
-  { value: 'SubPresidente', label: 'Vicepresidente' },
+  { value: 'Vicepresidente', label: 'Vicepresidente' },
   { value: 'Tesorero', label: 'Tesorero' },
   { value: 'Vocal', label: 'Vocal' },
+  { value: 'Miembro', label: 'Miembro' },
 ];
 
 export function BoardMemberForm({ 
