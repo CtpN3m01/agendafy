@@ -281,7 +281,8 @@ export function CreateMeetingDialog({
     try {
       // Convertir la hora a formato ISO
       const horaInicio = `${formData.fecha}T${formData.hora}:${formData.minutos}:00.000Z`;
-        const meetingData: CreateReunionData = {
+      
+      const meetingData: CreateReunionData = {
         titulo: formData.titulo,
         organizacion: currentOrganizationId,
         hora_inicio: horaInicio,
@@ -290,31 +291,27 @@ export function CreateMeetingDialog({
         modalidad: formData.modalidad,
         agenda: formData.agendaSeleccionada,
         convocados: formData.convocados,
-        // Pasar los archivos como File objects para que el hook los procese
-        archivosFiles: formData.archivos,
       };
 
-      console.log("📝 Datos de la reunión a crear:", meetingData);
-      console.log("📎 Archivos en memoria:", formData.archivos.map(f => f.name));
-      console.log("🆔 ID organización:", currentOrganizationId);
-
+      let success = false;
+      
+      // Forzar el uso del hook para debug
+      
       if (typeof createMeeting !== 'function') {
         setErrors({ general: "Error: createMeeting no está disponible" });
         return;
       }
       
-      console.log("📞 Llamando a createMeeting...");
       const result = await createMeeting(meetingData);
-      console.log("✅ Resultado createMeeting:", result);
-      
-      if (result) {
+      success = !!result;
+
+      if (success) {
         resetForm();
         onOpenChange(false);
       } else {
         setErrors({ general: "Error al crear la reunión" });
       }
     } catch (error) {
-      console.error("Error creating meeting:", error);
       setErrors({ general: "Error al crear la reunión" });
     } finally {
       setIsLoading(false);

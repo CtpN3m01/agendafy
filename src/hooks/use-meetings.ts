@@ -1,7 +1,7 @@
 // src/hooks/use-meetings.ts
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './use-auth';
 import { isValidObjectId } from '@/lib/validation';
 import { ConvocadoDTO } from '@/types/ReunionDTO';
@@ -142,7 +142,7 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       setIsLoading(false);
     }
   };
-  const createMeeting = async (data: CreateReunionData): Promise<ReunionData | null> => {
+  const createMeeting = useCallback(async (data: CreateReunionData): Promise<ReunionData | null> => {
     try {
       console.log("🏗️ HOOK createMeeting - Inicio");
       console.log("Datos recibidos:", data);
@@ -195,14 +195,13 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
         console.log("❌ Error del servidor:", errorData);
         setError(errorData.message || ERROR_MESSAGES.CREATE_ERROR);
         return null;
-      }
-    } catch (error) {
+      }    } catch (error) {
       console.error('❌ Error en createMeeting hook:', error);
       setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al crear la reunión`));
       return null;
     }
-  };
-  const updateMeeting = async (id: string, data: Partial<CreateReunionData>): Promise<ReunionData | null> => {
+  }, []);
+  const updateMeeting = useCallback(async (id: string, data: Partial<CreateReunionData>): Promise<ReunionData | null> => {
     try {
       setError(null);
 
@@ -230,14 +229,13 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
         const errorData = await response.json();
         setError(errorData.message || ERROR_MESSAGES.UPDATE_ERROR);
         return null;
-      }
-    } catch (error) {
+      }    } catch (error) {
       console.error('Error updating meeting:', error);
       setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al actualizar la reunión`));
       return null;
     }
-  };
-  const deleteMeeting = async (id: string): Promise<boolean> => {
+  }, []);
+  const deleteMeeting = useCallback(async (id: string): Promise<boolean> => {
     try {
       setError(null);
 
@@ -256,14 +254,12 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
         const errorData = await response.json();
         setError(errorData.message || ERROR_MESSAGES.DELETE_ERROR);
         return false;
-      }
-    } catch (error) {
+      }    } catch (error) {
       console.error('Error deleting meeting:', error);
       setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al eliminar la reunión`));
       return false;
     }
-  };
-  const getMeeting = async (id: string): Promise<ReunionData | null> => {
+  }, []);const getMeeting = useCallback(async (id: string): Promise<ReunionData | null> => {
     try {
       setError(null);
 
@@ -290,8 +286,8 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al obtener la reunión`));
       return null;
     }
-  };
-  const sendEmail = async (emailData: EmailData): Promise<boolean> => {
+  }, []);
+  const sendEmail = useCallback(async (emailData: EmailData): Promise<boolean> => {
     try {
       setError(null);
 
@@ -309,13 +305,12 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
         const errorData = await response.json();
         setError(errorData.message || ERROR_MESSAGES.EMAIL_ERROR);
         return false;
-      }
-    } catch (error) {
+      }    } catch (error) {
       console.error('Error sending email:', error);
       setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al enviar el correo`));
       return false;
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (organizacionId) {

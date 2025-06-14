@@ -5,18 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout";
 import { ProtectedRoute } from "@/components/auth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,133 +26,58 @@ import {
   Users, 
   MapPin, 
   Edit3, 
-  Save, 
   Trash2,
+  Mail,
+  FileText,
   Loader2
 } from "lucide-react";
-import { useMeetings } from "@/hooks/use-meetings";
+import { useMeetings, type ReunionData } from "@/hooks/use-meetings";
+import { useUserOrganization } from "@/hooks/use-user-organization";
 
-// Interface que coincide con la estructura de ReunionData del hook
-interface ReunionData {
-  _id: string;
-  titulo: string;
-  organizacion: string;
-  hora_inicio: string;
-  hora_fin?: string;
-  archivos?: string[];
-  convocados?: string[];
-  lugar?: string;
-  tipo_reunion?: string;
-  modalidad?: string;
-  agenda?: string;
-  puntos?: string[];
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-export default function ReunionPage() {
+export default function MeetingDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { getMeeting, updateMeeting, deleteMeeting } = useMeetings();
+  const { organization } = useUserOrganization();
+  const { getMeeting, deleteMeeting, sendEmail } = useMeetings(organization?.id);
   
-  const [reunion, setReunion] = useState<ReunionData | null>(null);
+  const [meeting, setMeeting] = useState<ReunionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    titulo: "",
-    organizacion: "",
-    hora_inicio: "",
-    hora_fin: "",
-    lugar: "",
-    tipo_reunion: "",
-    modalidad: "",
-    convocados: [] as string[],
-  });
 
-  const reunionId = params?.id as string;
+  const meetingId = params?.id as string;
+
+  // Cargar datos de la reunión
   useEffect(() => {
-    const loadReunion = async () => {
-      if (!reunionId) return;
+    const loadMeeting = async () => {
+      if (!meetingId) {
+        setError("ID de reunión no válido");
+        setIsLoading(false);
+        return;
+      }
       
       setIsLoading(true);
+      setError(null);
+      
       try {
-        const data = await getMeeting(reunionId);
+        const data = await getMeeting(meetingId);
         if (data) {
-          setReunion(data);
-          setFormData({
-            titulo: data.titulo,
-            organizacion: data.organizacion,
-            hora_inicio: data.hora_inicio,
-            hora_fin: data.hora_fin || "",
-            lugar: data.lugar || "",
-            tipo_reunion: data.tipo_reunion || "",
-            modalidad: data.modalidad || "",
-            convocados: data.convocados || [],
-          });
+          setMeeting(data);
         } else {
           setError("Reunión no encontrada");
         }
       } catch (err) {
+        console.error("Error al cargar la reunión:", err);
         setError("Error al cargar la reunión");
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadReunion();
-  }, [reunionId, getMeeting]);
-  const handleSave = async () => {
-    if (!reunion) return;
-    
-    setIsSaving(true);
-    try {
-      const updatedReunion = await updateMeeting(reunion._id, formData);
-      if (updatedReunion) {
-        setReunion(updatedReunion);
-        setIsEditing(false);
-      } else {
-        setError("Error al actualizar la reunión");
-      }
-    } catch (err) {
-      setError("Error al guardar los cambios");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    loadMeeting();
+  }, [meetingId, getMeeting]);
 
-  const handleDelete = async () => {
-    if (!reunion) return;
-    
-    try {
-      const success = await deleteMeeting(reunion._id);
-      if (success) {
-        router.push("/reuniones");
-      } else {
-        setError("Error al eliminar la reunión");
-      }
-    } catch (err) {
-      setError("Error al eliminar la reunión");
-    }
-  };
-  const handleCancel = () => {
-    if (reunion) {
-      setFormData({
-        titulo: reunion.titulo,
-        organizacion: reunion.organizacion,
-        hora_inicio: reunion.hora_inicio,
-        hora_fin: reunion.hora_fin || "",
-        lugar: reunion.lugar || "",
-        tipo_reunion: reunion.tipo_reunion || "",
-        modalidad: reunion.modalidad || "",
-        convocados: reunion.convocados || [],
-      });
-    }
-    setIsEditing(false);
-  };
-
-  const formatDate = (dateStr: string | Date | undefined) => {
+  // Funciones de utilidad
+  const formatDate = (dateStr: string) => {
     if (!dateStr) return "Sin fecha";
     const date = new Date(dateStr);
     return new Intl.DateTimeFormat('es-ES', {
@@ -173,22 +89,59 @@ export default function ReunionPage() {
 
   const formatTime = (timeStr: string) => {
     if (!timeStr) return "Sin hora";
-    return timeStr;
+    const date = new Date(timeStr);
+    return new Intl.DateTimeFormat('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
   };
 
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return "Sin fecha";
+    const date = new Date(dateStr);
+    return new Intl.DateTimeFormat('es-ES', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
+  };
+
+  // Handlers para los botones de acción
+  const handleEdit = () => {
+    // TODO: Implementar lógica de edición
+    console.log("Editar reunión:", meetingId);
+  };
+
+  const handleDelete = async () => {
+    // TODO: Implementar lógica de eliminación
+    console.log("Eliminar reunión:", meetingId);
+  };
+  const handleSendEmail = () => {
+    // TODO: Implementar lógica de envío de correo
+    console.log("Enviar correo para reunión:", meetingId);
+  };
+
+  // Estados de carga y error
   if (isLoading) {
     return (
       <ProtectedRoute>
         <AppLayout>
           <div className="flex items-center justify-center h-96">
-            <Loader2 className="h-8 w-8 animate-spin" />
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">Cargando reunión...</p>
+            </div>
           </div>
         </AppLayout>
       </ProtectedRoute>
     );
   }
 
-  if (error || !reunion) {
+  if (error || !meeting) {
     return (
       <ProtectedRoute>
         <AppLayout>
@@ -196,6 +149,7 @@ export default function ReunionPage() {
             <div className="text-center">
               <p className="text-muted-foreground mb-4">{error || "Reunión no encontrada"}</p>
               <Button onClick={() => router.push("/reuniones")}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
                 Volver a Reuniones
               </Button>
             </div>
@@ -209,8 +163,8 @@ export default function ReunionPage() {
     <ProtectedRoute>
       <AppLayout>
         <div className="space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
+          {/* Header con botones de acción */}
+          <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
@@ -219,236 +173,222 @@ export default function ReunionPage() {
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Volver
-              </Button>              <div>
-                <h1 className="text-3xl font-bold">{reunion.titulo}</h1>
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold">{meeting.titulo}</h1>
                 <p className="text-muted-foreground">
-                  Creada el {formatDate(reunion.createdAt)}
+                  {formatDateTime(meeting.hora_inicio)}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {!isEditing ? (
-                <>
-                  <Button onClick={() => setIsEditing(true)}>
-                    <Edit3 className="h-4 w-4 mr-2" />
-                    Editar
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSendEmail}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Enviar Correo
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleEdit}
+              >
+                <Edit3 className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Eliminar
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>¿Eliminar reunión?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta acción no se puede deshacer. La reunión será eliminada permanentemente.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>
-                          Eliminar
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </>
-              ) : (
-                <>
-                  <Button variant="outline" onClick={handleCancel}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Save className="h-4 w-4 mr-2" />
-                    )}
-                    Guardar
-                  </Button>
-                </>
-              )}
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Eliminar reunión?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta acción no se puede deshacer. La reunión será eliminada permanentemente.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>
+                      Eliminar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
-          </div>          {/* Content */}
+          </div>
+
+          {/* Información principal */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Detalles de la Reunión</CardTitle>
+                <CardTitle>Información General</CardTitle>
                 <Badge variant="default">
-                  {reunion.tipo_reunion || "Sin tipo"}
+                  {meeting.tipo_reunion}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {isEditing ? (
-                /* Edit Form */
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="titulo">Título</Label>
-                    <Input
-                      id="titulo"
-                      value={formData.titulo}
-                      onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="organizacion">Organización</Label>
-                    <Input
-                      id="organizacion"
-                      value={formData.organizacion}
-                      onChange={(e) => setFormData(prev => ({ ...prev, organizacion: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="hora_inicio">Hora de Inicio</Label>
-                      <Input
-                        id="hora_inicio"
-                        type="datetime-local"
-                        value={formData.hora_inicio}
-                        onChange={(e) => setFormData(prev => ({ ...prev, hora_inicio: e.target.value }))}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="hora_fin">Hora de Fin</Label>
-                      <Input
-                        id="hora_fin"
-                        type="datetime-local"
-                        value={formData.hora_fin}
-                        onChange={(e) => setFormData(prev => ({ ...prev, hora_fin: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="lugar">Lugar</Label>
-                      <Input
-                        id="lugar"
-                        value={formData.lugar}
-                        onChange={(e) => setFormData(prev => ({ ...prev, lugar: e.target.value }))}
-                        placeholder="Ubicación de la reunión"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Modalidad</Label>
-                      <Select
-                        value={formData.modalidad}
-                        onValueChange={(value) => 
-                          setFormData(prev => ({ ...prev, modalidad: value }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar modalidad" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="presencial">Presencial</SelectItem>
-                          <SelectItem value="virtual">Virtual</SelectItem>
-                          <SelectItem value="hibrida">Híbrida</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Tipo de Reunión</Label>
-                    <Select
-                      value={formData.tipo_reunion}
-                      onValueChange={(value) => 
-                        setFormData(prev => ({ ...prev, tipo_reunion: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ordinaria">Ordinaria</SelectItem>
-                        <SelectItem value="extraordinaria">Extraordinaria</SelectItem>
-                        <SelectItem value="emergencia">Emergencia</SelectItem>
-                      </SelectContent>
-                    </Select>
+              {/* Detalles básicos */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Fecha</p>
+                    <p className="text-muted-foreground">{formatDate(meeting.hora_inicio)}</p>
                   </div>
                 </div>
-              ) : (
-                /* View Mode */
-                <div className="space-y-6">
+
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <h3 className="font-semibold mb-2">Información General</h3>
-                    <p className="text-muted-foreground">
-                      {reunion.tipo_reunion || "Sin tipo especificado"}
-                    </p>
+                    <p className="font-medium">Hora de Inicio</p>
+                    <p className="text-muted-foreground">{formatTime(meeting.hora_inicio)}</p>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">Inicio</p>
-                        <p className="text-muted-foreground">{formatTime(reunion.hora_inicio)}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">Fin</p>
-                        <p className="text-muted-foreground">{formatTime(reunion.hora_fin || "No especificada")}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">Lugar</p>
-                        <p className="text-muted-foreground">{reunion.lugar || "No especificado"}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">Modalidad</p>
-                        <p className="text-muted-foreground">{reunion.modalidad || "No especificada"}</p>
-                      </div>
+                {meeting.hora_fin && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Hora de Fin</p>
+                      <p className="text-muted-foreground">{formatTime(meeting.hora_fin)}</p>
                     </div>
                   </div>
+                )}
 
-                  {reunion.convocados && reunion.convocados.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold mb-2">Convocados</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {reunion.convocados.map((convocado, index) => (
-                          <Badge key={index} variant="outline">
-                            {convocado}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <div className="flex items-center gap-2 text-sm">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Modalidad</p>
+                    <p className="text-muted-foreground">{meeting.modalidad}</p>
+                  </div>
+                </div>
+              </div>
 
-                  {reunion.archivos && reunion.archivos.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold mb-2">Archivos</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {reunion.archivos.map((archivo, index) => (
-                          <Badge key={index} variant="secondary">
-                            {archivo}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+              {/* Lugar */}
+              {meeting.lugar && (
+                <div>
+                  <h3 className="font-semibold mb-2">Ubicación</h3>
+                  <p className="text-muted-foreground">{meeting.lugar}</p>
+                </div>
+              )}
+
+              {/* Agenda */}
+              {meeting.agenda && (
+                <div>
+                  <h3 className="font-semibold mb-2">Agenda</h3>
+                  <p className="text-muted-foreground">{meeting.agenda}</p>
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* Convocados */}
+          {meeting.convocados && meeting.convocados.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Convocados ({meeting.convocados.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {meeting.convocados.map((convocado, index) => (
+                    <div key={convocado.correo || index} className="flex items-center gap-3 p-3 border rounded-lg">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {convocado.nombre?.charAt(0).toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {convocado.nombre || 'Sin nombre'}
+                        </p>
+                        {convocado.correo && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {convocado.correo}
+                          </p>
+                        )}
+                        <Badge 
+                          variant={convocado.esMiembro ? "default" : "secondary"} 
+                          className="text-xs mt-1"
+                        >
+                          {convocado.esMiembro ? "Miembro" : "Invitado"}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}          {/* Archivos adjuntos */}
+          {meeting.archivos && meeting.archivos.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Archivos Adjuntos ({meeting.archivos.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {meeting.archivos.map((archivo, index) => {
+                    const filename = archivo.split('/').pop() || archivo;
+                    const bucketUrl = process.env.NEXT_PUBLIC_SUPABASE_BUCKET_URL;
+                    const fileUrl = `${bucketUrl}/${organization?.id}/${filename}`;
+                    
+                    return (
+                      <div key={index} className="flex items-center p-3 border rounded-lg hover:bg-accent/50 transition-colors">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <a
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 hover:underline truncate"
+                            title={filename}
+                          >
+                            {filename}
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Puntos de la reunión */}
+          {meeting.puntos && meeting.puntos.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Puntos de la Reunión</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {meeting.puntos.map((punto, index) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <span className="text-sm text-muted-foreground mt-1">
+                        {index + 1}.
+                      </span>
+                      <p className="text-sm">{punto}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </AppLayout>
     </ProtectedRoute>
