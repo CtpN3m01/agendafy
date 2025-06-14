@@ -446,31 +446,8 @@ export function MeetingList({
       <CreateMeetingDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
-        onCreateMeeting={handleMeetingCreated}
+        onCreateMeeting={async () => true}
         organizacionId={organizacionId || ""} 
-      />      {/* Edit Meeting Dialog */}
-      <EditMeetingDialog
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        meeting={selectedMeeting}
-        onUpdate={handleUpdateMeeting}
-        organizacionId={organizacionId}
-      />
-
-      {/* Delete Meeting Dialog */}
-      <DeleteMeetingDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        meeting={selectedMeeting}
-        onDelete={handleConfirmDelete}
-      />
-
-      {/* Meeting Details Dialog */}
-      <MeetingDetailsDialog
-        open={showDetailsDialog}
-        onOpenChange={setShowDetailsDialog}
-        meeting={selectedMeeting}
-        organizacionId={organizacionId || ""}
       />
     </div>
   );
