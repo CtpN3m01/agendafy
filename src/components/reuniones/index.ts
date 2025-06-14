@@ -1,3 +1,9 @@
 export { MeetingList } from "./meeting-list";
 export { MeetingForm } from "./meeting-form";
 export { CreateMeetingDialog } from "./create-meeting-dialog";
+export { EditMeetingDialog } from "./edit-meeting-dialog";
+export { DeleteMeetingDialog } from "./delete-meeting-dialog";
+export { MeetingDetailsDialog } from "./meeting-details-dialog";
+export { MeetingsDashboard } from "./meetings-dashboard";
+export { MeetingsStats } from "./meetings-stats";
+export { MeetingsPagination } from "./meetings-pagination";
