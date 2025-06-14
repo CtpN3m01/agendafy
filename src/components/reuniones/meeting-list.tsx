@@ -213,8 +213,13 @@ export function MeetingList({ onCreateMeeting, onJoinMeeting, organizacionId }: 
       )}      {/* Create Meeting Dialog */}
       <CreateMeetingDialog
         open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onCreateMeeting={async () => true}
+        onOpenChange={(open) => {
+          setShowCreateDialog(open);
+          // Refrescar la lista cuando se cierra el diálogo
+          if (!open) {
+            refetch();
+          }
+        }}
         organizacionId={organizacionId || ""} 
       />
     </div>
