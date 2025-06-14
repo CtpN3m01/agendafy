@@ -1,62 +1,113 @@
 // src/hooks/use-agendas.ts
 "use client";
 
-import { useState, useEffect } from 'react';
-import { isValidObjectId } from '@/lib/validation';
+/**
+ * Hook personalizado para gestionar agendas y puntos
+ * 
+ * Características principales:
+ * - Se alinea con los DTOs del backend (CrearAgendaDTO, ActualizarAgendaDTO, CrearPuntoDTO)
+ * - Implementa funciones reutilizables para evitar duplicación de código
+ * - Manejo centralizado de errores
+ * - Peticiones HTTP optimizadas con una función helper
+ * - Estado local actualizado automáticamente
+ * - Validación de ObjectId antes de realizar consultas
+ * 
+ * @author Refactorizado para seguir buenas prácticas
+ */
 
-// Tipo basado en la API de agendas
-interface AgendaData {
+import { useState, useEffect, useCallback } from 'react';
+import { isValidObjectId } from '@/lib/validation';
+import { CrearAgendaDTO, ActualizarAgendaDTO } from '@/types/AgendaDTO';
+import { CrearPuntoDTO, ActualizarPuntoDTO } from '@/types/PuntoDTO';
+import mongoose from 'mongoose';
+
+// Interfaz para los datos de respuesta de la API (equivalente a AgendaData)
+interface AgendaResponse {
   _id: string;
   nombre: string;
-  organizacion: string;
-  puntos?: string[];
-  reuniones?: string[];
+  organizacion: string | mongoose.Types.ObjectId;
+  puntos?: string[] | mongoose.Types.ObjectId[];
+  reuniones?: string[] | mongoose.Types.ObjectId[];
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface CreateAgendaData {
-  nombre: string;
+// Tipo para crear agenda (alineado con DTO)
+type CreateAgendaData = Omit<CrearAgendaDTO, 'organizacion'> & {
   organizacion: string;
-  puntos?: string[];
-  reuniones?: string[];
-}
+};
 
-interface PuntoData {
+// Tipo para actualizar agenda
+type UpdateAgendaData = Omit<ActualizarAgendaDTO, 'organizacion'> & {
+  organizacion?: string;
+};
+
+// Interfaz para puntos (simplificada basada en DTO)
+interface PuntoData extends Omit<CrearPuntoDTO, 'agenda'> {
   _id?: string;
-  titulo: string;
-  tipo: "Informativo" | "Aprobacion" | "Fondo";
-  duracion: number;
-  detalles: string;
-  anotaciones?: string;
-  expositor: string;
-  archivos?: string[];
-  votosAFavor?: number;
-  votosEnContra?: number;
-  decisiones?: string[];
   agenda?: string;
 }
 
+// Tipos de respuesta reutilizables
+type ApiResponse<T> = {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+};
+
 interface UseAgendasReturn {
-  agendas: AgendaData[];
+  agendas: AgendaResponse[];
   isLoading: boolean;
   error: string | null;
-  createAgenda: (data: CreateAgendaData) => Promise<AgendaData | null>;
-  updateAgenda: (id: string, data: Partial<CreateAgendaData>) => Promise<AgendaData | null>;
+  createAgenda: (data: CreateAgendaData) => Promise<AgendaResponse | null>;
+  updateAgenda: (id: string, data: Partial<CreateAgendaData>) => Promise<AgendaResponse | null>;
   deleteAgenda: (id: string) => Promise<boolean>;
-  getAgenda: (id: string, populated?: boolean) => Promise<AgendaData | null>;
-  getAgendasByOrganization: (organizacionId: string) => Promise<AgendaData[]>;
-  createAgendaWithPuntos: (agendaData: CreateAgendaData, puntos: Omit<PuntoData, 'agenda'>[]) => Promise<AgendaData | null>;
+  getAgenda: (id: string, populated?: boolean) => Promise<AgendaResponse | null>;
+  getAgendasByOrganization: (organizacionId: string) => Promise<AgendaResponse[]>;
+  createAgendaWithPuntos: (agendaData: CreateAgendaData, puntos: Omit<PuntoData, 'agenda'>[]) => Promise<AgendaResponse | null>;
   getPuntosByAgenda: (agendaId: string) => Promise<PuntoData[]>;
   refetch: () => Promise<void>;
 }
 
 export function useAgendas(organizacionId?: string): UseAgendasReturn {
-  const [agendas, setAgendas] = useState<AgendaData[]>([]);
+  const [agendas, setAgendas] = useState<AgendaResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAgendas = async () => {
+  // Función reutilizable para manejar errores de API
+  const handleApiError = useCallback((error: unknown, defaultMessage: string) => {
+    console.error(defaultMessage, error);
+    const errorMessage = error instanceof Error ? error.message : defaultMessage;
+    setError(errorMessage);
+  }, []);
+
+  // Función reutilizable para hacer peticiones HTTP
+  const makeApiRequest = useCallback(async <T>(
+    url: string, 
+    options: RequestInit = {}
+  ): Promise<T | null> => {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        ...options,
+      });
+
+      if (response.ok) {
+        return await response.json();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Error en la petición: ${response.status}`);
+      }
+    } catch (error) {
+      throw error;
+    }
+  }, []);
+
+  const fetchAgendas = useCallback(async () => {
     if (!organizacionId) {
       setAgendas([]);
       setIsLoading(false);
@@ -74,71 +125,49 @@ export function useAgendas(organizacionId?: string): UseAgendasReturn {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/mongo/agenda/obtenerAgenda?organizacion=${organizacionId}`);
+      const result = await makeApiRequest<AgendaResponse[]>(
+        `/api/mongo/agenda/obtenerAgenda?organizacion=${organizacionId}`
+      );
       
-      if (response.ok) {
-        const agendas = await response.json();
-        setAgendas(agendas);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Error al cargar las agendas');
+      if (result) {
+        setAgendas(result);
       }
     } catch (error) {
-      console.error('Error fetching agendas:', error);
-      setError('Error de conexión al cargar las agendas');
+      handleApiError(error, 'Error al cargar las agendas');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [organizacionId, makeApiRequest, handleApiError]);
 
-  const createAgenda = async (data: CreateAgendaData): Promise<AgendaData | null> => {
+  const createAgenda = async (data: CreateAgendaData): Promise<AgendaResponse | null> => {
     try {
       setError(null);
 
-      const response = await fetch('/api/mongo/agenda/crearAgenda', {
+      const result = await makeApiRequest<AgendaResponse>('/api/mongo/agenda/crearAgenda', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(data),
       });
 
-      if (response.ok) {
-        const result = await response.json();
+      if (result) {
         // Actualizar la lista local
         setAgendas(prev => [...prev, result]);
         return result;
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Error al crear la agenda');
-        return null;
       }
+      return null;
     } catch (error) {
-      console.error('Error creating agenda:', error);
-      setError('Error de conexión al crear la agenda');
+      handleApiError(error, 'Error al crear la agenda');
       return null;
     }
   };
 
   const createPunto = async (puntoData: PuntoData): Promise<PuntoData | null> => {
     try {
-      const response = await fetch('/api/mongo/punto/crearPunto', {
+      const result = await makeApiRequest<PuntoData>('/api/mongo/punto/crearPunto', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(puntoData),
       });
-
-      if (response.ok) {
-        const result = await response.json();
-        return result;
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al crear el punto');
-      }
+      return result;
     } catch (error) {
-      console.error('Error creating punto:', error);
       throw error;
     }
   };
@@ -146,7 +175,7 @@ export function useAgendas(organizacionId?: string): UseAgendasReturn {
   const createAgendaWithPuntos = async (
     agendaData: CreateAgendaData, 
     puntos: Omit<PuntoData, 'agenda'>[]
-  ): Promise<AgendaData | null> => {
+  ): Promise<AgendaResponse | null> => {
     try {
       setError(null);
 
@@ -165,28 +194,25 @@ export function useAgendas(organizacionId?: string): UseAgendasReturn {
         };
         
         const puntoCreadoResult = await createPunto(puntoCompleto);
-        if (puntoCreadoResult) {
-          puntosCreados.push(puntoCreadoResult._id!);
+        if (puntoCreadoResult?._id) {
+          puntosCreados.push(puntoCreadoResult._id);
         }
-      }
-
-      // Actualizar la agenda con los IDs de los puntos creados
+      }      // Actualizar la agenda con los IDs de los puntos creados
       if (puntosCreados.length > 0) {
         const agendaActualizada = await updateAgenda(nuevaAgenda._id, {
-          puntos: puntosCreados
+          puntos: puntosCreados as any // Casting temporal para compatibilidad
         });
         return agendaActualizada || nuevaAgenda;
       }
 
       return nuevaAgenda;
     } catch (error) {
-      console.error('Error creating agenda with puntos:', error);
-      setError('Error al crear la agenda con puntos');
+      handleApiError(error, 'Error al crear la agenda con puntos');
       return null;
     }
   };
 
-  const updateAgenda = async (id: string, data: Partial<CreateAgendaData>): Promise<AgendaData | null> => {
+  const updateAgenda = async (id: string, data: Partial<CreateAgendaData>): Promise<AgendaResponse | null> => {
     try {
       setError(null);
 
@@ -195,29 +221,21 @@ export function useAgendas(organizacionId?: string): UseAgendasReturn {
         ...data
       };
 
-      const response = await fetch('/api/mongo/agenda/editarAgenda', {
+      const result = await makeApiRequest<{ agenda: AgendaResponse }>('/api/mongo/agenda/editarAgenda', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(updateData),
       });
 
-      if (response.ok) {
-        const result = await response.json();
+      if (result?.agenda) {
         // Actualizar la lista local
         setAgendas(prev => prev.map(agenda => 
           agenda._id === id ? result.agenda : agenda
         ));
         return result.agenda;
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Error al actualizar la agenda');
-        return null;
       }
+      return null;
     } catch (error) {
-      console.error('Error updating agenda:', error);
-      setError('Error de conexión al actualizar la agenda');
+      handleApiError(error, 'Error al actualizar la agenda');
       return null;
     }
   };
@@ -226,27 +244,20 @@ export function useAgendas(organizacionId?: string): UseAgendasReturn {
     try {
       setError(null);
 
-      const response = await fetch(`/api/mongo/agenda/eliminarAgenda?id=${id}`, {
+      await makeApiRequest(`/api/mongo/agenda/eliminarAgenda?id=${id}`, {
         method: 'DELETE',
       });
 
-      if (response.ok) {
-        // Remover de la lista local
-        setAgendas(prev => prev.filter(agenda => agenda._id !== id));
-        return true;
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Error al eliminar la agenda');
-        return false;
-      }
+      // Remover de la lista local
+      setAgendas(prev => prev.filter(agenda => agenda._id !== id));
+      return true;
     } catch (error) {
-      console.error('Error deleting agenda:', error);
-      setError('Error de conexión al eliminar la agenda');
+      handleApiError(error, 'Error al eliminar la agenda');
       return false;
     }
   };
 
-  const getAgenda = async (id: string, populated: boolean = false): Promise<AgendaData | null> => {
+  const getAgenda = async (id: string, populated: boolean = false): Promise<AgendaResponse | null> => {
     try {
       setError(null);
 
@@ -254,62 +265,44 @@ export function useAgendas(organizacionId?: string): UseAgendasReturn {
         ? `/api/mongo/agenda/obtenerAgenda?id=${id}&poblado=true`
         : `/api/mongo/agenda/obtenerAgenda?id=${id}`;
 
-      const response = await fetch(url);
-
-      if (response.ok) {
-        const result = await response.json();
-        return result;
-      } else if (response.status === 404) {
-        setError('Agenda no encontrada');
-        return null;
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Error al obtener la agenda');
-        return null;
-      }
+      const result = await makeApiRequest<AgendaResponse>(url);
+      return result;
     } catch (error) {
-      console.error('Error getting agenda:', error);
-      setError('Error de conexión al obtener la agenda');
+      if (error instanceof Error && error.message.includes('404')) {
+        setError('Agenda no encontrada');
+      } else {
+        handleApiError(error, 'Error al obtener la agenda');
+      }
       return null;
     }
   };
 
-  const getAgendasByOrganization = async (organizacionId: string): Promise<AgendaData[]> => {
+  const getAgendasByOrganization = async (organizacionId: string): Promise<AgendaResponse[]> => {
     try {
       setError(null);
 
-      const response = await fetch(`/api/mongo/agenda/obtenerAgenda?organizacion=${organizacionId}`);
-
-      if (response.ok) {
-        const result = await response.json();
-        return result;
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Error al obtener las agendas');
-        return [];
-      }
+      const result = await makeApiRequest<AgendaResponse[]>(
+        `/api/mongo/agenda/obtenerAgenda?organizacion=${organizacionId}`
+      );
+      
+      return result || [];
     } catch (error) {
-      console.error('Error getting agendas by organization:', error);
-      setError('Error de conexión al obtener las agendas');
+      handleApiError(error, 'Error al obtener las agendas');
       return [];
     }
-  };  const getPuntosByAgenda = async (agendaId: string): Promise<PuntoData[]> => {
+  };
+
+  const getPuntosByAgenda = async (agendaId: string): Promise<PuntoData[]> => {
     try {
       setError(null);
 
-      const response = await fetch(`/api/mongo/punto/obtenerPuntosPorAgenda?agendaId=${agendaId}`);
-
-      if (response.ok) {
-        const result = await response.json();
-        return Array.isArray(result) ? result : [];
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Error al obtener los puntos');
-        return [];
-      }
+      const result = await makeApiRequest<PuntoData[]>(
+        `/api/mongo/punto/obtenerPuntosPorAgenda?agendaId=${agendaId}`
+      );
+      
+      return Array.isArray(result) ? result : [];
     } catch (error) {
-      console.error('Error getting puntos by agenda:', error);
-      setError('Error de conexión al obtener los puntos');
+      handleApiError(error, 'Error al obtener los puntos');
       return [];
     }
   };
@@ -320,7 +313,7 @@ export function useAgendas(organizacionId?: string): UseAgendasReturn {
     } else {
       setIsLoading(false);
     }
-  }, [organizacionId]);
+  }, [organizacionId, fetchAgendas]);
 
   return {
     agendas,
@@ -341,29 +334,50 @@ export function useAgendas(organizacionId?: string): UseAgendasReturn {
 export function usePuntos() {
   const [error, setError] = useState<string | null>(null);
 
+  // Función reutilizable para manejar errores de API
+  const handleApiError = useCallback((error: unknown, defaultMessage: string) => {
+    console.error(defaultMessage, error);
+    const errorMessage = error instanceof Error ? error.message : defaultMessage;
+    setError(errorMessage);
+  }, []);
+
+  // Función reutilizable para hacer peticiones HTTP
+  const makeApiRequest = useCallback(async <T>(
+    url: string, 
+    options: RequestInit = {}
+  ): Promise<T | null> => {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        ...options,
+      });
+
+      if (response.ok) {
+        return await response.json();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Error en la petición: ${response.status}`);
+      }
+    } catch (error) {
+      throw error;
+    }
+  }, []);
+
   const createPunto = async (puntoData: PuntoData): Promise<PuntoData | null> => {
     try {
       setError(null);
 
-      const response = await fetch('/api/mongo/punto/crearPunto', {
+      const result = await makeApiRequest<PuntoData>('/api/mongo/punto/crearPunto', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(puntoData),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        return result;
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Error al crear el punto');
-        return null;
-      }
+      return result;
     } catch (error) {
-      console.error('Error creating punto:', error);
-      setError('Error de conexión al crear el punto');
+      handleApiError(error, 'Error al crear el punto');
       return null;
     }
   };
@@ -374,25 +388,14 @@ export function usePuntos() {
 
       const updateData = { id, ...data };
 
-      const response = await fetch('/api/mongo/punto/editarPunto', {
+      const result = await makeApiRequest<{ punto: PuntoData }>('/api/mongo/punto/editarPunto', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(updateData),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        return result.punto;
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Error al actualizar el punto');
-        return null;
-      }
+      return result?.punto || null;
     } catch (error) {
-      console.error('Error updating punto:', error);
-      setError('Error de conexión al actualizar el punto');
+      handleApiError(error, 'Error al actualizar el punto');
       return null;
     }
   };
@@ -401,24 +404,14 @@ export function usePuntos() {
     try {
       setError(null);
 
-      const response = await fetch('/api/mongo/punto/eliminarPunto', {
+      await makeApiRequest('/api/mongo/punto/eliminarPunto', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ id }),
       });
 
-      if (response.ok) {
-        return true;
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Error al eliminar el punto');
-        return false;
-      }
+      return true;
     } catch (error) {
-      console.error('Error deleting punto:', error);
-      setError('Error de conexión al eliminar el punto');
+      handleApiError(error, 'Error al eliminar el punto');
       return false;
     }
   };
@@ -427,19 +420,10 @@ export function usePuntos() {
     try {
       setError(null);
 
-      const response = await fetch(`/api/mongo/punto/obtenerPunto?id=${id}`);
-
-      if (response.ok) {
-        const result = await response.json();
-        return result;
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Error al obtener el punto');
-        return null;
-      }
+      const result = await makeApiRequest<PuntoData>(`/api/mongo/punto/obtenerPunto?id=${id}`);
+      return result;
     } catch (error) {
-      console.error('Error getting punto:', error);
-      setError('Error de conexión al obtener el punto');
+      handleApiError(error, 'Error al obtener el punto');
       return null;
     }
   };
