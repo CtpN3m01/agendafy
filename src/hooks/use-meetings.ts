@@ -98,26 +98,7 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
     if (error instanceof Error) {
       return error.message;
     }
-    return defaultMessage;
-  };
-
-  // Función utilitaria para hacer requests
-  const makeApiRequest = async (
-    url: string, 
-    options: RequestInit = {}
-  ): Promise<Response> => {
-    const defaultHeaders = {
-      'Content-Type': 'application/json',
-    };
-
-    return fetch(url, {
-      ...options,
-      headers: {
-        ...defaultHeaders,
-        ...options.headers,
-      },
-    });
-  };
+    return defaultMessage;  };
 
   const fetchMeetings = async () => {
     if (!organizacionId) {
@@ -137,9 +118,12 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       setIsLoading(true);
       setError(null);
 
-      const response = await makeApiRequest(
-        `${API_ENDPOINTS.GET_BY_ORG}?organizacion=${organizacionId}`
-      );
+      const response = await fetch(`${API_ENDPOINTS.GET_BY_ORG}?organizacion=${organizacionId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
       if (response.ok) {
         const reuniones: ReunionData[] = await response.json();
@@ -158,30 +142,45 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
 
   const createMeeting = async (data: CreateReunionData): Promise<ReunionData | null> => {
     try {
+      console.log("🏗️ HOOK createMeeting - Inicio");
+      console.log("Datos recibidos:", data);
+      console.log("Endpoint:", API_ENDPOINTS.CREATE);
+      
       setError(null);
-
-      const response = await makeApiRequest(API_ENDPOINTS.CREATE, {
+      console.log("HOLAAAA");
+      // Usar fetch directamente como en use-board-members
+      const response = await fetch(API_ENDPOINTS.CREATE, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(data),
+      });
+
+      console.log("📡 Respuesta del servidor:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
       });
 
       if (response.ok) {
         const result: ReunionData = await response.json();
+        console.log("✅ Reunión creada exitosamente:", result);
         // Actualizar la lista local
         setMeetings(prev => [...prev, result]);
         return result;
       } else {
         const errorData = await response.json();
+        console.log("❌ Error del servidor:", errorData);
         setError(errorData.message || ERROR_MESSAGES.CREATE_ERROR);
         return null;
       }
     } catch (error) {
-      console.error('Error creating meeting:', error);
+      console.error('❌ Error en createMeeting hook:', error);
       setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al crear la reunión`));
       return null;
     }
   };
-
   const updateMeeting = async (id: string, data: Partial<CreateReunionData>): Promise<ReunionData | null> => {
     try {
       setError(null);
@@ -191,8 +190,11 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
         ...data
       };
 
-      const response = await makeApiRequest(API_ENDPOINTS.UPDATE, {
+      const response = await fetch(API_ENDPOINTS.UPDATE, {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(updateData),
       });
 
@@ -214,13 +216,15 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       return null;
     }
   };
-
   const deleteMeeting = async (id: string): Promise<boolean> => {
     try {
       setError(null);
 
-      const response = await makeApiRequest(`${API_ENDPOINTS.DELETE}?id=${id}`, {
+      const response = await fetch(`${API_ENDPOINTS.DELETE}?id=${id}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {
@@ -238,12 +242,16 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       return false;
     }
   };
-
   const getMeeting = async (id: string): Promise<ReunionData | null> => {
     try {
       setError(null);
 
-      const response = await makeApiRequest(`${API_ENDPOINTS.GET_ONE}?id=${id}`);
+      const response = await fetch(`${API_ENDPOINTS.GET_ONE}?id=${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
       if (response.ok) {
         const result: ReunionData = await response.json();
@@ -262,13 +270,15 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       return null;
     }
   };
-
   const sendEmail = async (emailData: EmailData): Promise<boolean> => {
     try {
       setError(null);
 
-      const response = await makeApiRequest(API_ENDPOINTS.SEND_EMAIL, {
+      const response = await fetch(API_ENDPOINTS.SEND_EMAIL, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(emailData),
       });
 
@@ -292,9 +302,7 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
     } else {
       setIsLoading(false);
     }
-  }, [organizacionId]);
-
-  return {
+  }, [organizacionId]);  const hookReturn = {
     meetings,
     isLoading,
     error,
@@ -305,4 +313,7 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
     sendEmail,
     refetch: fetchMeetings,
   };
+  
+  
+  return hookReturn;
 }

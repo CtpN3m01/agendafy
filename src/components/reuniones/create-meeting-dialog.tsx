@@ -1,7 +1,7 @@
 // src/components/reuniones/create-meeting-dialog.tsx
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,13 +21,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CalendarDays, Clock, Users, Upload, Plus, FileText, X, Edit3 } from "lucide-react";
-import { useMeetings, CreateReunionData } from "@/hooks/use-meetings";
+import { useMeetings, type CreateReunionData } from "@/hooks/use-meetings";
 import { useAgendas } from "@/hooks/use-agendas";
 import { useUserOrganization } from "@/hooks/use-user-organization";
-import { useBoardMembers } from "@/hooks/use-board-members";
+import { useOrganizationMembers, type OrganizationMember } from "@/hooks/use-organization-members";
 import { CreateAgendaDialog } from "@/components/agenda";
-import { ConvocadoDTO } from "@/types/ReunionDTO";
+import { type ConvocadoDTO } from "@/types/ReunionDTO";
 
+// Types
 interface CreateMeetingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,27 +36,129 @@ interface CreateMeetingDialogProps {
   organizacionId?: string;
 }
 
-// Interfaces locales para el formulario
 interface FormData {
   titulo: string;
   agendaSeleccionada: string;
-  convocados: string[]; // Array de IDs de miembros
+  convocados: ConvocadoDTO[];
   archivos: File[];
   hora: string;
   minutos: string;
   fecha: string;
-  organizacion: string;
-  tipo_reunion: "Extraordinaria" | "Ordinaria";
+  tipoReunion: "Extraordinaria" | "Ordinaria";
   modalidad: "Presencial" | "Virtual";
   lugar: string;
 }
 
-// Componente memoizado para archivos
-const FileItem = React.memo(({ 
-  file, 
-  index, 
-  onRemove 
-}: { 
+// Constants
+const INITIAL_FORM_STATE: FormData = {
+  titulo: "",
+  agendaSeleccionada: "",
+  convocados: [],
+  archivos: [],
+  hora: "09",
+  minutos: "00",
+  fecha: "",
+  tipoReunion: "Ordinaria",
+  modalidad: "Virtual",
+  lugar: "",
+};
+
+// Custom Hooks
+const useCreateMeetingForm = (organizacionId: string) => {
+  const [formData, setFormData] = useState<FormData>(INITIAL_FORM_STATE);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateForm = useCallback((): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.titulo.trim()) {
+      newErrors.titulo = "El título es requerido";
+    }
+
+    if (!formData.fecha) {
+      newErrors.fecha = "La fecha es requerida";
+    }
+
+    if (!formData.hora) {
+      newErrors.hora = "La hora es requerida";
+    }
+
+    if (!formData.agendaSeleccionada) {
+      newErrors.agenda = "La agenda es requerida";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData.titulo, formData.fecha, formData.hora, formData.agendaSeleccionada]);
+
+  const resetForm = useCallback(() => {
+    setFormData(INITIAL_FORM_STATE);
+    setErrors({});
+  }, []);
+
+  const updateFormData = useCallback((updates: Partial<FormData>) => {
+    setFormData(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const toggleConvocado = useCallback((member: OrganizationMember) => {
+    setFormData(prev => {
+      const exists = prev.convocados.find(c => c.correo === member.correo);
+      
+      if (exists) {
+        // Remover convocado
+        return {
+          ...prev,
+          convocados: prev.convocados.filter(c => c.correo !== member.correo)
+        };
+      } else {
+        // Agregar convocado
+        const convocado: ConvocadoDTO = {
+          nombre: member.nombre,
+          correo: member.correo,
+          esMiembro: member.esMiembro,
+        };
+        return {
+          ...prev,
+          convocados: [...prev.convocados, convocado]
+        };
+      }
+    });
+  }, []);
+
+  const addFiles = useCallback((files: File[]) => {
+    setFormData(prev => ({
+      ...prev,
+      archivos: [...prev.archivos, ...files],
+    }));
+  }, []);
+
+  const removeFile = useCallback((index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      archivos: prev.archivos.filter((_, i) => i !== index),
+    }));
+  }, []);
+
+  const isConvocadoSelected = useCallback((member: OrganizationMember): boolean => {
+    return formData.convocados.some(c => c.correo === member.correo);
+  }, [formData.convocados]);
+
+  return {
+    formData,
+    errors,
+    validateForm,
+    resetForm,
+    updateFormData,
+    toggleConvocado,
+    addFiles,
+    removeFile,
+    isConvocadoSelected,
+    setErrors,
+  };
+};
+
+// Components
+const FileBadge = React.memo(({ file, index, onRemove }: { 
   file: File; 
   index: number; 
   onRemove: (index: number) => void; 
@@ -78,184 +181,94 @@ const FileItem = React.memo(({
   </div>
 ));
 
-// Componente memoizado para miembros
 const MemberButton = React.memo(({ 
   member, 
   isSelected, 
-  onToggle 
+  onClick 
 }: { 
-  member: { _id: string; nombre: string; apellidos: string; correo: string }; 
+  member: OrganizationMember; 
   isSelected: boolean; 
-  onToggle: () => void; 
+  onClick: () => void; 
 }) => (
   <Button
     type="button"
     variant={isSelected ? "default" : "outline"}
     size="sm"
-    className={`justify-start text-xs h-auto py-2 transition-all duration-200 ${
+    className={`justify-start text-xs h-auto py-3 transition-colors ${
       isSelected 
-        ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600" 
+        ? "bg-blue-600 hover:bg-blue-700 text-white" 
         : "hover:bg-gray-50"
     }`}
-    onClick={onToggle}
+    onClick={onClick}
   >
-    <div className="flex flex-col items-start">
-      <span className="font-medium">{member.nombre} {member.apellidos}</span>
-      <span className={isSelected ? "text-blue-100" : "text-muted-foreground"}>
+    <div className="flex flex-col items-start w-full">
+      <span className="font-medium">{member.nombre}</span>
+      <span className={`text-xs ${isSelected ? "text-blue-100" : "text-muted-foreground"}`}>
         {member.correo}
+      </span>
+      <span className={`text-xs ${
+        isSelected 
+          ? "text-blue-200" 
+          : member.esMiembro 
+            ? "text-green-600" 
+            : "text-gray-500"
+      }`}>
+        {member.esMiembro ? "Miembro" : "Invitado"}
       </span>
     </div>
   </Button>
 ));
 
+// Main Component
 export function CreateMeetingDialog({ 
   open, 
   onOpenChange, 
   onCreateMeeting,
   organizacionId = ""
 }: CreateMeetingDialogProps) {
-  const { createMeeting } = useMeetings(organizacionId);
+
   const { organization } = useUserOrganization();
   
-  // Determinar la organización actual
+  // Usar la organización del usuario o la que se pasa como prop
   const currentOrganizationId = useMemo(() => 
     organizacionId || organization?.id || "", 
     [organizacionId, organization?.id]
   );
+  
 
-  // Hooks condicionalmente cargados
+    // Hooks - usar currentOrganizationId en lugar de organizacionId
+  const { createMeeting } = useMeetings(currentOrganizationId);
+  
   const { agendas, isLoading: agendasLoading, refetch: refetchAgendas } = useAgendas(
     open ? currentOrganizationId : undefined
   );
-  
-  const { members: boardMembers, isLoading: membersLoading } = useBoardMembers(
-    open ? currentOrganizationId : null
+  const { members, isLoading: membersLoading } = useOrganizationMembers(
+    open ? currentOrganizationId : undefined
   );
-  
-  // Estados del formulario
+  const {
+    formData,
+    errors,
+    validateForm,
+    resetForm,
+    updateFormData,
+    toggleConvocado,
+    addFiles,
+    removeFile,
+    isConvocadoSelected,
+    setErrors,
+  } = useCreateMeetingForm(currentOrganizationId);
+
+  // State
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [editingAgenda, setEditingAgenda] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Estado inicial del formulario
-  const initialFormData: FormData = useMemo(() => ({
-    titulo: "",
-    agendaSeleccionada: "",
-    convocados: [],
-    archivos: [],
-    hora: "07",
-    minutos: "00",
-    fecha: "",
-    organizacion: currentOrganizationId,
-    tipo_reunion: "Ordinaria",
-    modalidad: "Virtual",
-    lugar: "",
-  }), [currentOrganizationId]);
 
-  const [formData, setFormData] = useState<FormData>(initialFormData);
-
-  // Resetear formulario cuando cambie la organización
-  useEffect(() => {
-    setFormData(prev => ({ ...prev, organizacion: currentOrganizationId }));
-  }, [currentOrganizationId]);
-
-  // Validación del formulario
-  const validateForm = useCallback((): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.titulo.trim()) {
-      newErrors.titulo = "El título es requerido";
-    }
-
-    if (!formData.fecha) {
-      newErrors.fecha = "La fecha es requerida";
-    }
-
-    if (!formData.hora) {
-      newErrors.hora = "La hora es requerida";
-    }
-
-    if (!formData.agendaSeleccionada) {
-      newErrors.agenda = "La agenda es requerida";
-    }
-
-    if (!formData.lugar.trim()) {
-      newErrors.lugar = "El lugar es requerido";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
-
-  // Resetear formulario
-  const resetForm = useCallback(() => {
-    setFormData(initialFormData);
-    setErrors({});
-  }, [initialFormData]);
-
-  // Conversión de convocados para CreateAgendaDialog
-  const convocadosData = useMemo((): Array<{ nombre: string; correo: string; esMiembro: boolean }> => {
-    return formData.convocados.map(memberId => {
-      const member = boardMembers.find(m => m._id === memberId);
-      if (member) {
-        return {
-          nombre: `${member.nombre} ${member.apellidos}`,
-          correo: member.correo,
-          esMiembro: true
-        };
-      }
-      return null;
-    }).filter(Boolean) as Array<{ nombre: string; correo: string; esMiembro: boolean }>;
-  }, [formData.convocados, boardMembers]);
-
-  // Conversión de convocados para la API
-  const getConvocadosForAPI = useCallback((): ConvocadoDTO[] => {
-    return convocadosData;
-  }, [convocadosData]);
-
-  // Handlers para archivos
+  // Handlers
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setFormData(prev => ({
-      ...prev,
-      archivos: [...prev.archivos, ...files]
-    }));
-  }, []);
-
-  const removeFile = useCallback((index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      archivos: prev.archivos.filter((_, i) => i !== index)
-    }));
-  }, []);
-
-  // Handlers para miembros
-  const toggleMember = useCallback((memberId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      convocados: prev.convocados.includes(memberId)
-        ? prev.convocados.filter(id => id !== memberId)
-        : [...prev.convocados, memberId]
-    }));
-  }, []);
-
-  // Handlers optimizados para inputs
-  const updateField = useCallback(<K extends keyof FormData>(
-    field: K,
-    value: FormData[K]
-  ) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  }, []);
-
-  // Crear hora_inicio en formato ISO
-  const createHoraInicio = useCallback((): string => {
-    return `${formData.fecha}T${formData.hora}:${formData.minutos}:00.000Z`;
-  }, [formData.fecha, formData.hora, formData.minutos]);
-
-  // Submit del formulario
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    addFiles(files);
+  }, [addFiles]);  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -266,25 +279,37 @@ export function CreateMeetingDialog({
     setErrors({});
 
     try {
+      // Convertir la hora a formato ISO
+      const horaInicio = `${formData.fecha}T${formData.hora}:${formData.minutos}:00.000Z`;
+      
       const meetingData: CreateReunionData = {
         titulo: formData.titulo,
         organizacion: currentOrganizationId,
-        hora_inicio: createHoraInicio(),
+        hora_inicio: horaInicio,
         lugar: formData.lugar,
-        tipo_reunion: formData.tipo_reunion,
+        tipo_reunion: formData.tipoReunion,
         modalidad: formData.modalidad,
         agenda: formData.agendaSeleccionada,
-        convocados: getConvocadosForAPI(),
-        archivos: [], // Las URLs de archivos se manejarían en el backend
-      };
+        convocados: formData.convocados,
+      };      console.log("📝 Datos de la reunión a crear:", meetingData);
+      console.log("🔧 Verificando funciones disponibles:");
+      console.log("- onCreateMeeting:", typeof onCreateMeeting);
+      console.log("- createMeeting:", typeof createMeeting);
+      console.log("- onCreateMeeting está definido:", !!onCreateMeeting);
 
       let success = false;
-      if (onCreateMeeting) {
-        success = await onCreateMeeting(meetingData);
-      } else {
-        const result = await createMeeting(meetingData);
-        success = !!result;
+      
+      // Forzar el uso del hook para debug
+      
+      if (typeof createMeeting !== 'function') {
+        setErrors({ general: "Error: createMeeting no está disponible" });
+        return;
       }
+      
+      console.log("📞 Llamando a createMeeting...");
+      const result = await createMeeting(meetingData);
+      console.log("Resultado createMeeting:", result);
+      success = !!result;
 
       if (success) {
         resetForm();
@@ -298,23 +323,12 @@ export function CreateMeetingDialog({
     } finally {
       setIsLoading(false);
     }
-  }, [
-    formData, 
-    validateForm, 
-    onCreateMeeting, 
-    createMeeting, 
-    currentOrganizationId, 
-    createHoraInicio, 
-    getConvocadosForAPI, 
-    resetForm, 
-    onOpenChange
-  ]);
+  }, [formData, validateForm, onCreateMeeting, createMeeting, currentOrganizationId, resetForm, onOpenChange, setErrors]);
 
   const handleCancel = useCallback(() => {
     resetForm();
     onOpenChange(false);
   }, [resetForm, onOpenChange]);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[900px] lg:max-w-[1100px] max-h-[90vh] overflow-y-auto">
@@ -334,8 +348,7 @@ export function CreateMeetingDialog({
             <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md">
               {errors.general}
             </div>
-          )}
-
+          )}          
           {/* Título */}
           <div className="space-y-2">
             <Label htmlFor="titulo" className="text-sm font-medium">
@@ -344,7 +357,7 @@ export function CreateMeetingDialog({
             <Input
               id="titulo"
               value={formData.titulo}
-              onChange={(e) => updateField('titulo', e.target.value)}
+              onChange={(e) => updateFormData({ titulo: e.target.value })}
               placeholder="Ej: Reunión mensual de equipo"
               className={errors.titulo ? "border-red-500" : ""}
             />
@@ -357,33 +370,24 @@ export function CreateMeetingDialog({
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Personas convocadas
-              {formData.convocados.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  ({formData.convocados.length} seleccionados)
-                </span>
-              )}
+              Miembros convocados ({formData.convocados.length} seleccionados)
             </Label>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-              {membersLoading ? (
-                <div className="col-span-full text-center text-sm text-muted-foreground">
-                  Cargando miembros...
-                </div>
-              ) : boardMembers.length === 0 ? (
-                <div className="col-span-full text-center text-sm text-muted-foreground">
-                  No hay miembros registrados en la organización
-                </div>
-              ) : (
-                boardMembers.map((member) => (
+            {membersLoading ? (
+              <div className="text-sm text-muted-foreground">Cargando miembros...</div>
+            ) : members.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No hay miembros disponibles</div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                {members.map((member) => (
                   <MemberButton
-                    key={member._id}
+                    key={member.id}
                     member={member}
-                    isSelected={formData.convocados.includes(member._id)}
-                    onToggle={() => toggleMember(member._id)}
+                    isSelected={isConvocadoSelected(member)}
+                    onClick={() => toggleConvocado(member)}
                   />
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Archivos */}
@@ -418,12 +422,7 @@ export function CreateMeetingDialog({
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                   {formData.archivos.map((file, index) => (
-                    <FileItem 
-                      key={`${file.name}-${index}`} 
-                      file={file} 
-                      index={index} 
-                      onRemove={removeFile} 
-                    />
+                    <FileBadge key={index} file={file} index={index} onRemove={removeFile} />
                   ))}
                 </div>
               </div>
@@ -432,6 +431,7 @@ export function CreateMeetingDialog({
 
           {/* Fecha y Hora */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Fecha */}
             <div className="space-y-2">
               <Label htmlFor="fecha" className="text-sm font-medium flex items-center gap-2">
                 <CalendarDays className="h-4 w-4" />
@@ -441,7 +441,7 @@ export function CreateMeetingDialog({
                 id="fecha"
                 type="date"
                 value={formData.fecha}
-                onChange={(e) => updateField('fecha', e.target.value)}
+                onChange={(e) => updateFormData({ fecha: e.target.value })}
                 className={errors.fecha ? "border-red-500" : ""}
               />
               {errors.fecha && (
@@ -449,6 +449,7 @@ export function CreateMeetingDialog({
               )}
             </div>
 
+            {/* Hora */}
             <div className="space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <Clock className="h-4 w-4" />
@@ -457,7 +458,7 @@ export function CreateMeetingDialog({
               <div className="flex gap-2">
                 <Select
                   value={formData.hora}
-                  onValueChange={(value) => updateField('hora', value)}
+                  onValueChange={(value) => updateFormData({ hora: value })}
                 >
                   <SelectTrigger className="w-20">
                     <SelectValue />
@@ -476,11 +477,11 @@ export function CreateMeetingDialog({
                 
                 <Select
                   value={formData.minutos}
-                  onValueChange={(value) => updateField('minutos', value)}
+                  onValueChange={(value) => updateFormData({ minutos: value })}
                 >
                   <SelectTrigger className="w-20">
                     <SelectValue />
-                  </SelectTrigger>
+                  </SelectTrigger>                  
                   <SelectContent>
                     {Array.from({ length: 60 }, (_, i) => {
                       const minute = i.toString().padStart(2, '0');
@@ -501,15 +502,14 @@ export function CreateMeetingDialog({
 
           {/* Configuración de la Reunión */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Tipo de Reunión */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">
                 Tipo de reunión
               </Label>
               <Select
-                value={formData.tipo_reunion}
-                onValueChange={(value: "Extraordinaria" | "Ordinaria") => 
-                  updateField('tipo_reunion', value)
-                }
+                value={formData.tipoReunion}
+                onValueChange={(value) => updateFormData({ tipoReunion: value as "Extraordinaria" | "Ordinaria" })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -521,15 +521,14 @@ export function CreateMeetingDialog({
               </Select>
             </div>
 
+            {/* Modalidad */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">
                 Modalidad
               </Label>
               <Select
                 value={formData.modalidad}
-                onValueChange={(value: "Presencial" | "Virtual") => 
-                  updateField('modalidad', value)
-                }
+                onValueChange={(value) => updateFormData({ modalidad: value as "Presencial" | "Virtual" })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -540,27 +539,17 @@ export function CreateMeetingDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* Lugar o URL */}
+          </div>          {/* Lugar o URL */}
           <div className="space-y-2">
             <Label htmlFor="lugar" className="text-sm font-medium">
-              {formData.modalidad === "Virtual" ? "URL de la reunión" : "Lugar"} *
+              {formData.modalidad === "Virtual" ? "URL de la reunión" : "Lugar"}
             </Label>            
             <Input
               id="lugar"
               value={formData.lugar}
-              onChange={(e) => updateField('lugar', e.target.value)}
-              placeholder={
-                formData.modalidad === "Virtual" 
-                  ? "Enlace de videollamada (ej: https://meet.google.com/...)" 
-                  : "Dirección o sala de reuniones"
-              }
-              className={errors.lugar ? "border-red-500" : ""}
+              onChange={(e) => updateFormData({ lugar: e.target.value })}
+              placeholder={formData.modalidad === "Virtual" ? "Enlace de videollamada (ej: https://meet.google.com/...)" : "Dirección o sala de reuniones"}
             />
-            {errors.lugar && (
-              <p className="text-sm text-red-500">{errors.lugar}</p>
-            )}
           </div>
 
           {/* Agenda */}
@@ -572,7 +561,7 @@ export function CreateMeetingDialog({
             <div className="flex gap-2">
               <Select
                 value={formData.agendaSeleccionada}
-                onValueChange={(value) => updateField('agendaSeleccionada', value)}
+                onValueChange={(value) => updateFormData({ agendaSeleccionada: value })}
                 disabled={agendasLoading}
               >
                 <SelectTrigger className="flex-1">
@@ -616,10 +605,9 @@ export function CreateMeetingDialog({
               <CreateAgendaDialog
                 organizacionId={currentOrganizationId}
                 availableFiles={formData.archivos}
-                convocados={convocadosData}
                 onAgendaCreated={(agenda) => {
                   refetchAgendas();
-                  updateField('agendaSeleccionada', agenda._id);
+                  updateFormData({ agendaSeleccionada: agenda._id });
                 }}
                 trigger={
                   <Button
@@ -633,13 +621,13 @@ export function CreateMeetingDialog({
                 }
               />
             </div>
+            {errors.agenda && (
+              <p className="text-sm text-red-500">{errors.agenda}</p>
+            )}
             {formData.agendaSeleccionada && (
               <div className="text-xs text-muted-foreground">
                 Agenda seleccionada: {agendas.find(a => a._id === formData.agendaSeleccionada)?.nombre}
               </div>
-            )}
-            {errors.agenda && (
-              <p className="text-sm text-red-500">{errors.agenda}</p>
             )}
           </div>
 
@@ -648,7 +636,6 @@ export function CreateMeetingDialog({
             <CreateAgendaDialog
               organizacionId={currentOrganizationId}
               availableFiles={formData.archivos}
-              convocados={convocadosData}
               editMode={true}
               agendaToEdit={editingAgenda}
               open={editDialogOpen}
@@ -660,24 +647,27 @@ export function CreateMeetingDialog({
               }}
             />
           )}
-
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleCancel}
-              disabled={isLoading}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={isLoading || !formData.titulo.trim() || !formData.fecha || !formData.agendaSeleccionada}
-            >
-              {isLoading ? "Creando..." : "Crear Reunión"}
-            </Button>
-          </DialogFooter>
         </form>
+
+        <DialogFooter>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={handleCancel}
+            disabled={isLoading}
+          >
+            Cancelar
+          </Button>          
+          <Button 
+            type="submit" 
+            onClick={(e) => {
+              handleSubmit(e);
+            }}
+            disabled={isLoading || !formData.titulo.trim() || !formData.fecha || !formData.agendaSeleccionada}
+          >
+            {isLoading ? "Creando..." : "Crear Reunión"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

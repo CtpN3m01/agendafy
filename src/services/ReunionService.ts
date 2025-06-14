@@ -2,7 +2,9 @@ import { CrearReunionDTO } from '@/types/ReunionDTO';
 import { ReunionDAO } from '@/dao/ReunionDAO';
 
 export class ReunionService {
-    private reunionDAO = new ReunionDAO();    async crearReunion(reunionData: CrearReunionDTO) {
+    private reunionDAO = new ReunionDAO();    
+    
+    async crearReunion(reunionData: CrearReunionDTO) {
         
         // Solo validar hora_fin si está presente
         if (reunionData.hora_fin && new Date(reunionData.hora_inicio) >= new Date(reunionData.hora_fin)) {
