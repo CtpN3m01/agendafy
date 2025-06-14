@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { useAuth } from './use-auth';
 import { isValidObjectId } from '@/lib/validation';
 import { ConvocadoDTO } from '@/types/ReunionDTO';
-import { subirArchivos } from '@/services/ArchivoService';
 
 // Interfaces que coinciden exactamente con el backend
 export interface ReunionData {
@@ -36,8 +35,6 @@ export interface CreateReunionData {
   modalidad: 'Presencial' | 'Virtual';
   agenda: string;
   puntos?: string[];
-  // Agregar archivos como Files para el manejo en memoria
-  archivosFiles?: File[];
 }
 
 interface UseMeetingsReturn {
@@ -142,51 +139,33 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       setIsLoading(false);
     }
   };
+
   const createMeeting = async (data: CreateReunionData): Promise<ReunionData | null> => {
     try {
       console.log("🏗️ HOOK createMeeting - Inicio");
       console.log("Datos recibidos:", data);
+      console.log("Endpoint:", API_ENDPOINTS.CREATE);
       
       setError(null);
-
-      // Extraer archivos y datos de la reunión
-      const { archivosFiles, ...reunionData } = data;
-      let archivosFilenames: string[] = [];
-
-      // Si hay archivos para subir, subirlos primero usando el ID de organización
-      if (archivosFiles && archivosFiles.length > 0) {
-        console.log("📎 Subiendo archivos a Supabase con ID organización:", reunionData.organizacion);
-        
-        try {
-          archivosFilenames = await subirArchivos(archivosFiles, reunionData.organizacion);
-          console.log("✅ Archivos subidos exitosamente:", archivosFilenames);
-        } catch (fileError) {
-          console.error("❌ Error al subir archivos:", fileError);
-          setError("Error al subir los archivos adjuntos");
-          return null;
-        }
-      }
-
-      // Crear la reunión con los nombres de archivos
-      const reunionDataWithFiles = {
-        ...reunionData,
-        archivos: archivosFilenames
-      };
-
-      console.log("📡 Creando reunión con datos:", reunionDataWithFiles);
-      
+      console.log("HOLAAAA");
+      // Usar fetch directamente como en use-board-members
       const response = await fetch(API_ENDPOINTS.CREATE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(reunionDataWithFiles),
+        body: JSON.stringify(data),
+      });
+
+      console.log("📡 Respuesta del servidor:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
       });
 
       if (response.ok) {
         const result: ReunionData = await response.json();
         console.log("✅ Reunión creada exitosamente:", result);
-        
         // Actualizar la lista local
         setMeetings(prev => [...prev, result]);
         return result;
