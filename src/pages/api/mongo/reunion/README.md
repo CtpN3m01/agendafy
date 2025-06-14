@@ -6,6 +6,7 @@
 - [Eliminar Reunion](#eliminar-reunion)
 - [Actualizar Reunion](#editar-reunion)
 - [Obtener Reunion](#obtener-reunion)
+- [Obtener Reuniones](#obtener-reuniones)
 - [Enviar Correo](#enviar-correo)
 
 ## Crear Reunion
@@ -22,16 +23,16 @@
   "archivos": ["string"],
   "convocados": [
     {
-        "nombre": "string",
-        "correo": "string@email.com",
-        "esMiembro": true | false
-      },
-      {
-        "nombre": "string",
-        "correo": "string@email.com",
-        "esMiembro": false | true
-      }
-    ]
+      "nombre": "string",
+      "correo": "string@email.com",
+      "esMiembro": true
+    },
+    {
+      "nombre": "string",
+      "correo": "string@email.com", 
+      "esMiembro": false
+    }
+  ],
   "lugar": "string",
   "tipo_reunion": "string",
   "modalidad": "string",
@@ -49,7 +50,11 @@
     "hora_inicio": "AAAA-MM-DDTHH:MM:SSZ",
     "archivos": [],
     "convocados": [
-        // Json objects
+        {
+          "nombre": "string",
+          "correo": "string@email.com",
+          "esMiembro": true
+        }
     ],
     "lugar": "string",
     "tipo_reunion": "string",
@@ -75,7 +80,16 @@
     "organizacion": "60f7c7c3f8a7c23eec0f5f6d",
     "hora_inicio": "2025-06-05T15:32:00.000Z",
     "convocados": [
-      // json objects
+      {
+        "nombre": "Juan Pérez",
+        "correo": "juan.perez@email.com",
+        "esMiembro": true
+      },
+      {
+        "nombre": "María García",
+        "correo": "maria.garcia@email.com",
+        "esMiembro": false
+      }
     ],
     "lugar": "tec",
     "tipo_reunion": "Extraordinaria",
@@ -115,7 +129,11 @@
   "hora_fin": "AAAA-MM-DDTHH:MM:SSZ",
   "archivos": ["string"],
   "convocados": [
-    // JSON objects
+    {
+      "nombre": "string",
+      "correo": "string@email.com",
+      "esMiembro": true
+    }
   ],
   "lugar": "string",
   "tipo_reunion": "string",
@@ -137,7 +155,11 @@
         "hora_fin": "AAAA-MM-DDTHH:MM:SSZ",
         "archivos": [],
         "convocados": [
-            // JSON Objects
+            {
+              "nombre": "string",
+              "correo": "string@email.com",
+              "esMiembro": true
+            }
         ],
         "lugar": "string",
         "tipo_reunion": "string",
@@ -177,7 +199,11 @@
     "hora_fin": "AAAA-MM-DDTHH:MM:SSZ",
     "archivos": [],
     "convocados": [
-        // JSON oBjects
+        {
+          "nombre": "string",
+          "correo": "string@email.com",
+          "esMiembro": true
+        }
     ],
     "lugar": "string",
     "tipo_reunion": "string",
@@ -197,6 +223,41 @@
 
 ### Ejemplo
 `api/mongo/Reunion/obtenerReunion?id=60f7c7c3f8a7c23eec0f5f6e`
+
+## Obtener Reuniones
+`GET` `/api/mongo/Reunion/obtenerReuniones?organizacion=id_organizacion`
+
+### Respuesta `200`
+```json
+{
+    "_id": "string",
+    "titulo": "string",
+    "organizacion": "string",
+    "hora_inicio": "AAAA-MM-DDTHH:MM:SSZ",
+    "hora_fin": "AAAA-MM-DDTHH:MM:SSZ",
+    "archivos": [],
+    "convocados": [
+        {
+          "nombre": "string",
+          "correo": "string@email.com",
+          "esMiembro": true
+        }
+    ],
+    "lugar": "string",
+    "tipo_reunion": "string",
+    "modalidad": "string",
+    "agenda": "string",
+    "puntos": [],
+    "__v": 0
+}
+```
+
+### Respuesta `400`
+```json
+{
+  "error": "ID de organización requerido"
+}
+```
 
 ## Enviar Correo
 `POST` `/api/mongo/Reunion/enviarCorreo`
@@ -219,12 +280,12 @@
       {
         "nombre": "string",
         "correo": "string",
-        "esInvitado": true
+        "esMiembro": true
       },
       {
         "nombre": "string",
         "correo": "string",
-        "esInvitado": false
+        "esMiembro": false
       }
     ]
   }

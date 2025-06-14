@@ -7,6 +7,12 @@ el consumidor.
 
 import mongoose from 'mongoose';
 
+export interface ConvocadoDTO {
+    nombre: string;
+    correo: string;
+    esMiembro: boolean;
+}
+
 export interface CrearReunionDTO {
     _id: mongoose.Types.ObjectId; // ID generado por el cliente
     titulo: string;
@@ -14,7 +20,7 @@ export interface CrearReunionDTO {
     hora_inicio: Date;
     hora_fin: Date;
     archivos: string[]; // urls de los archivos
-    convocados: string[];
+    convocados: ConvocadoDTO[];
     lugar: string;
     tipo_reunion: 'Extraordinaria' | 'Ordinaria';
     modalidad: 'Presencial' | 'Virtual';
