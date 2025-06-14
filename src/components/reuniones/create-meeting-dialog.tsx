@@ -40,7 +40,7 @@ interface FormData {
   titulo: string;
   agendaSeleccionada: string;
   convocados: ConvocadoDTO[];
-  archivos: File[];
+  archivos: File[]; // Mantener como File[] para archivos en memoria
   hora: string;
   minutos: string;
   fecha: string;
@@ -67,6 +67,8 @@ const INITIAL_FORM_STATE: FormData = {
 const useCreateMeetingForm = (organizacionId: string) => {
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_STATE);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Estado para el formulario de invitado externo
+  const [guestForm, setGuestForm] = useState({ nombre: "", correo: "" });
 
   const validateForm = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
@@ -94,6 +96,7 @@ const useCreateMeetingForm = (organizacionId: string) => {
   const resetForm = useCallback(() => {
     setFormData(INITIAL_FORM_STATE);
     setErrors({});
+    setGuestForm({ nombre: "", correo: "" });
   }, []);
 
   const updateFormData = useCallback((updates: Partial<FormData>) => {
@@ -143,9 +146,46 @@ const useCreateMeetingForm = (organizacionId: string) => {
     return formData.convocados.some(c => c.correo === member.correo);
   }, [formData.convocados]);
 
+  const addExternalGuest = useCallback(() => {
+    const { nombre, correo } = guestForm;
+    
+    // Validación simple
+    if (!nombre.trim() || !correo.trim()) return false;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) return false;
+    
+    // Verificar que no exista ya
+    const exists = formData.convocados.some(c => c.correo.toLowerCase() === correo.toLowerCase());
+    if (exists) return false;
+    
+    // Agregar convocado externo
+    const nuevoConvocado: ConvocadoDTO = {
+      nombre: nombre.trim(),
+      correo: correo.trim().toLowerCase(),
+      esMiembro: false
+    };
+    
+    setFormData(prev => ({
+      ...prev,
+      convocados: [...prev.convocados, nuevoConvocado]
+    }));
+    
+    // Limpiar formulario
+    setGuestForm({ nombre: "", correo: "" });
+    return true;
+  }, [guestForm, formData.convocados]);
+
+  const removeConvocado = useCallback((correo: string) => {
+    setFormData(prev => ({
+      ...prev,
+      convocados: prev.convocados.filter(c => c.correo !== correo)
+    }));
+  }, []);
+
   return {
     formData,
     errors,
+    guestForm,
+    setGuestForm,
     validateForm,
     resetForm,
     updateFormData,
@@ -153,6 +193,8 @@ const useCreateMeetingForm = (organizacionId: string) => {
     addFiles,
     removeFile,
     isConvocadoSelected,
+    addExternalGuest,
+    removeConvocado,
     setErrors,
   };
 };
@@ -248,6 +290,8 @@ export function CreateMeetingDialog({
   const {
     formData,
     errors,
+    guestForm,
+    setGuestForm,
     validateForm,
     resetForm,
     updateFormData,
@@ -255,6 +299,8 @@ export function CreateMeetingDialog({
     addFiles,
     removeFile,
     isConvocadoSelected,
+    addExternalGuest,
+    removeConvocado,
     setErrors,
   } = useCreateMeetingForm(currentOrganizationId);
 
@@ -291,19 +337,17 @@ export function CreateMeetingDialog({
         modalidad: formData.modalidad,
         agenda: formData.agendaSeleccionada,
         convocados: formData.convocados,
+        archivosFiles: formData.archivos, // Pasar los archivos en memoria al hook
       };
 
-      let success = false;
-      
-      // Forzar el uso del hook para debug
-      
       if (typeof createMeeting !== 'function') {
         setErrors({ general: "Error: createMeeting no está disponible" });
         return;
       }
       
+      // El hook se encarga de subir los archivos y crear la reunión
       const result = await createMeeting(meetingData);
-      success = !!result;
+      const success = !!result;
 
       if (success) {
         resetForm();
@@ -316,7 +360,7 @@ export function CreateMeetingDialog({
     } finally {
       setIsLoading(false);
     }
-  }, [formData, validateForm, onCreateMeeting, createMeeting, currentOrganizationId, resetForm, onOpenChange, setErrors]);
+  }, [formData, validateForm, createMeeting, currentOrganizationId, resetForm, onOpenChange, setErrors]);
 
   const handleCancel = useCallback(() => {
     resetForm();
@@ -360,27 +404,101 @@ export function CreateMeetingDialog({
           </div>
 
           {/* Miembros Convocados */}
-          <div className="space-y-2">
+          <div className="space-y-4">
             <Label className="text-sm font-medium flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Miembros convocados ({formData.convocados.length} seleccionados)
+              Convocados ({formData.convocados.length} seleccionados)
             </Label>
-            {membersLoading ? (
-              <div className="text-sm text-muted-foreground">Cargando miembros...</div>
-            ) : members.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No hay miembros disponibles</div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 max-h-60 overflow-y-auto">
-                {members.map((member) => (
-                  <MemberButton
-                    key={member.id}
-                    member={member}
-                    isSelected={isConvocadoSelected(member)}
-                    onClick={() => toggleConvocado(member)}
-                  />
-                ))}
+            
+            {/* Lista de convocados seleccionados */}
+            {formData.convocados.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs text-muted-foreground font-medium">
+                  Lista de convocados:
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                  {formData.convocados.map((convocado) => (
+                    <div key={convocado.correo} className="flex items-center justify-between bg-gray-50 p-3 rounded-md border">
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="font-medium text-sm truncate">{convocado.nombre}</span>
+                        <span className="text-xs text-muted-foreground truncate">{convocado.correo}</span>
+                        <span className={`text-xs ${
+                          convocado.esMiembro 
+                            ? "text-green-600" 
+                            : "text-blue-600"
+                        }`}>
+                          {convocado.esMiembro ? "Miembro de la junta" : "Invitado externo"}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeConvocado(convocado.correo)}
+                        className="text-red-500 hover:text-red-700 h-8 w-8 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+            
+            {/* Miembros de la organización */}
+            <div className="space-y-2">
+              <div className="text-xs text-muted-foreground font-medium">
+                Miembros de la junta directiva:
+              </div>
+              {membersLoading ? (
+                <div className="text-sm text-muted-foreground">Cargando miembros...</div>
+              ) : members.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No hay miembros disponibles</div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                  {members.map((member) => (
+                    <MemberButton
+                      key={member.id}
+                      member={member}
+                      isSelected={isConvocadoSelected(member)}
+                      onClick={() => toggleConvocado(member)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {/* Convocados Externos */}
+            <div className="space-y-2 border-t pt-4">
+              <div className="text-xs text-muted-foreground font-medium">
+                Agregar invitado externo:
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  value={guestForm.nombre}
+                  onChange={(e) => setGuestForm({ ...guestForm, nombre: e.target.value })}
+                  placeholder="Nombre del invitado"
+                  className="flex-1"
+                />
+                <Input
+                  type="email"
+                  value={guestForm.correo}
+                  onChange={(e) => setGuestForm({ ...guestForm, correo: e.target.value })}
+                  placeholder="correo@ejemplo.com"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  onClick={addExternalGuest}
+                  disabled={!guestForm.nombre.trim() || !guestForm.correo.trim()}
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Agregar
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Archivos */}
@@ -598,6 +716,7 @@ export function CreateMeetingDialog({
               <CreateAgendaDialog
                 organizacionId={currentOrganizationId}
                 availableFiles={formData.archivos}
+                convocados={formData.convocados}
                 onAgendaCreated={(agenda) => {
                   refetchAgendas();
                   updateFormData({ agendaSeleccionada: agenda._id });
@@ -629,6 +748,7 @@ export function CreateMeetingDialog({
             <CreateAgendaDialog
               organizacionId={currentOrganizationId}
               availableFiles={formData.archivos}
+              convocados={formData.convocados}
               editMode={true}
               agendaToEdit={editingAgenda}
               open={editDialogOpen}
@@ -640,6 +760,7 @@ export function CreateMeetingDialog({
               }}
             />
           )}
+
         </form>
 
         <DialogFooter>

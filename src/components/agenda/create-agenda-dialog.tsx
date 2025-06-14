@@ -36,6 +36,7 @@ import {
   X
 } from "lucide-react";
 import { useAgendas, usePuntos } from "@/hooks/use-agendas";
+import { TipoPunto } from '@/types/punto-types';
 
 interface ConvocadoData {
   nombre: string;
@@ -46,7 +47,7 @@ interface ConvocadoData {
 interface PuntoFormData {
   id: string;
   titulo: string;
-  tipo: "Informativo" | "Aprobacion" | "Fondo";
+  tipo: TipoPunto;
   duracion: number;
   expositor: string;
   detalles?: string;
@@ -77,7 +78,7 @@ export function CreateAgendaDialog({
   agendaToEdit,
   open: externalOpen,
   onOpenChange: externalOnOpenChange,
-  convocados = [] // Add the missing convocados prop with default value
+  convocados = []
 }: CreateAgendaDialogProps) {
   const { createAgendaWithPuntos, updateAgenda, getAgenda, getPuntosByAgenda } = useAgendas();
   const { createPunto: createPuntoAPI, updatePunto: updatePuntoAPI, deletePunto: deletePuntoAPI } = usePuntos();
@@ -104,7 +105,7 @@ export function CreateAgendaDialog({
     {
       id: "1",
       titulo: "Presentación inicial",
-      tipo: "Informativo" as const,
+      tipo: TipoPunto.Informativo,
       duracion: 30,
       expositor: "",
       archivos: [],
@@ -132,7 +133,7 @@ export function CreateAgendaDialog({
           const puntosFormData = puntosData.map((punto, index) => ({
             id: punto._id || index.toString(),
             titulo: punto.titulo,
-            tipo: punto.tipo,
+            tipo: punto.tipo as TipoPunto,
             duracion: punto.duracion,
             expositor: punto.expositor,
             detalles: punto.detalles || "",
@@ -147,7 +148,7 @@ export function CreateAgendaDialog({
             {
               id: "new-1",
               titulo: "Presentación inicial",
-              tipo: "Informativo" as const,
+              tipo: TipoPunto.Informativo,
               duracion: 30,
               expositor: "",
               archivos: [],
@@ -174,7 +175,7 @@ export function CreateAgendaDialog({
     const newPunto: PuntoFormData = {
       id: editMode ? `new-${Date.now()}` : Date.now().toString(),
       titulo: "",
-      tipo: "Informativo",
+      tipo: TipoPunto.Informativo,
       duracion: 15,
       expositor: "",
       archivos: [],
@@ -297,10 +298,10 @@ export function CreateAgendaDialog({
         }
       }
 
-      // 4. Actualizar la agenda con los IDs de puntos actualizados
+      // 4. Actualizar la agenda con los IDs de puntos actualizados (solo si hay puntos)
       if (puntosCreados.length > 0) {
         await updateAgenda(agendaToEdit._id, {
-          puntos: puntosCreados
+          nombre: agendaData.nombre, // Mantener solo campos válidos
         });
       }
 
@@ -373,8 +374,12 @@ export function CreateAgendaDialog({
     if (puntosIncompletos.length > 0) {
       setError("Todos los puntos deben tener título y expositor");
       return;
-    }    setIsLoading(true);
-    setError(null);    try {
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
       if (editMode && agendaToEdit) {
         // Modo edición - actualizar agenda con puntos
         const agendaActualizada = await updateAgendaWithPuntos();
@@ -420,13 +425,14 @@ export function CreateAgendaDialog({
       setIsLoading(false);
     }
   };
+
   const resetForm = () => {
     setAgendaData({ nombre: "" });        
     setPuntos([
       {
         id: "1",
         titulo: "Presentación inicial",
-        tipo: "Informativo",
+        tipo: TipoPunto.Informativo,
         duracion: 30,
         expositor: "",
         archivos: [],
@@ -556,15 +562,15 @@ export function CreateAgendaDialog({
                           <Label>Tipo</Label>
                           <Select
                             value={punto.tipo}
-                            onValueChange={(value: any) => updatePunto(punto.id, { tipo: value })}
+                            onValueChange={(value: TipoPunto) => updatePunto(punto.id, { tipo: value })}
                           >
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Informativo">Informativo</SelectItem>
-                              <SelectItem value="Aprobacion">Aprobación</SelectItem>
-                              <SelectItem value="Fondo">Fondo</SelectItem>
+                              <SelectItem value={TipoPunto.Informativo}>Informativo</SelectItem>
+                              <SelectItem value={TipoPunto.Aprobacion}>Aprobación</SelectItem>
+                              <SelectItem value={TipoPunto.Fondo}>Fondo</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -601,6 +607,13 @@ export function CreateAgendaDialog({
                                     <div className="flex flex-col items-start w-full">
                                       <span className="font-medium text-sm leading-tight">{convocado.nombre}</span>
                                       <span className="text-xs text-muted-foreground leading-tight">{convocado.correo}</span>
+                                      <span className={`text-xs leading-tight ${
+                                        convocado.esMiembro 
+                                          ? "text-green-600" 
+                                          : "text-blue-600"
+                                      }`}>
+                                        {convocado.esMiembro ? "Miembro de la junta" : "Invitado externo"}
+                                      </span>
                                     </div>
                                   </SelectItem>
                                 ))}
@@ -615,7 +628,9 @@ export function CreateAgendaDialog({
                             />
                           )}
                         </div>
-                      </div><div className="space-y-2">
+                      </div>
+
+                      <div className="space-y-2">
                         <Label>Detalles</Label>
                         <Textarea
                           value={punto.detalles || ""}
@@ -623,7 +638,8 @@ export function CreateAgendaDialog({
                           placeholder="Detalles adicionales..."
                           rows={2}
                         />
-                      </div><div className="space-y-2">
+                      </div>
+                      <div className="space-y-2">
                         <Label>Anotaciones</Label>
                         <Textarea
                           value={punto.anotaciones || ""}
@@ -697,6 +713,17 @@ export function CreateAgendaDialog({
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <User className="h-3 w-3" />
                         <span>{punto.expositor || "Sin expositor"}</span>
+                        {/* Mostrar información adicional si el expositor está en la lista de convocados */}
+                        {convocados.length > 0 && punto.expositor && (
+                          (() => {
+                            const convocado = convocados.find(c => c.nombre === punto.expositor);
+                            return convocado ? (
+                              <Badge variant="outline" className="text-xs">
+                                {convocado.esMiembro ? "Miembro" : "Invitado"}
+                              </Badge>
+                            ) : null;
+                          })()
+                        )}
                       </div>                      
                       {punto.archivos && punto.archivos.length > 0 && (
                         <div className="flex flex-wrap gap-1">
@@ -725,7 +752,8 @@ export function CreateAgendaDialog({
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel}>
             Cancelar
-          </Button>          <Button onClick={handleSubmit} disabled={isLoading}>
+          </Button>          
+          <Button onClick={handleSubmit} disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
