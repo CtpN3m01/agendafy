@@ -507,6 +507,51 @@ export default function MeetingDetailPage() {
     });
   };
 
+  const handleFinishAct = async (reunionId: string) => { 
+
+    const reunionRes = await fetch(`/api/mongo/reunion/obtenerReunion?id=${reunionId}`);
+    const reunion = await reunionRes.json();
+
+    const puntosRes = await fetch(`/api/mongo/punto/obtenerPuntosPorAgenda?agendaId=${reunion.agenda}`);
+    const puntos = await puntosRes.json();
+
+    const agendaRes = await fetch(`/api/mongo/agenda/obtenerAgenda?id=${reunion.agenda}`);
+    const agenda = await agendaRes.json();
+
+    const organizacionRes = await fetch(`/api/mongo/organizacion/obtenerOrganizacion?id=${reunion.organizacion}`);
+    const organizacion = await organizacionRes.json();
+
+    const response = await fetch('/api/generarPDF/downloadPDF', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reunion, puntos, organizacion, agenda })
+    });
+
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+
+      const fileName = `${agenda.nombre
+        .normalize("NFD")                  // Separa letras y tildes (á → a +  ́)
+        .replace(/[\u0300-\u036f]/g, '')  // Elimina las tildes ( ́)
+        .replace(/[^a-zA-Z0-9-_]/g, '_')  // Reemplaza los demás caracteres no válidos
+      }.pdf`;
+
+      link.download = `${fileName}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      alert("PDF descargado con éxito.");
+    } else {
+      alert("Error al generar el PDF");
+    }
+  };
+
   // Estados de carga y error
   if (isLoading) {
     return (
@@ -576,14 +621,29 @@ export default function MeetingDetailPage() {
                 )}
                 Enviar Correo
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleEdit}
-              >
-                <Edit3 className="h-4 w-4 mr-2" />
-                {isMeetingEnded() ? "Terminar Acta" : "Editar"}
-              </Button>
+              {/* Botón Editar: solo si NO ha iniciado NI terminado */}
+              {!isMeetingStarted() && !isMeetingEnded() && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEdit}
+                >
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              )}
+
+              {/* Botón Terminar Acta: solo si ya terminó */}
+              {isMeetingEnded() && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleFinishAct(meeting._id)}
+                >
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Terminar Acta
+                </Button>
+              )}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
