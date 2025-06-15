@@ -49,6 +49,9 @@ interface UseMeetingsReturn {
   deleteMeeting: (id: string) => Promise<boolean>;
   getMeeting: (id: string) => Promise<ReunionData | null>;
   sendEmail: (emailData: EmailData) => Promise<boolean>;
+  startMeeting: (id: string) => Promise<boolean>;
+  endMeeting: (id: string) => Promise<boolean>;
+  updatePointAnnotations: (pointId: string, annotations: string) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
 
@@ -82,7 +85,9 @@ const API_ENDPOINTS = {
   DELETE: '/api/mongo/reunion/eliminarReunion',
   GET_ONE: '/api/mongo/reunion/obtenerReunion',
   GET_BY_ORG: '/api/mongo/reunion/obtenerReuniones',
-  SEND_EMAIL: '/api/mongo/reunion/enviarCorreo',
+  SEND_EMAIL: '/api/mongo/reunion/enviarCorreo',  START_MEETING: '/api/mongo/reunion/iniciarReunion',
+  END_MEETING: '/api/mongo/reunion/terminarReunion',
+  UPDATE_POINT_ANNOTATIONS: '/api/mongo/punto/editarPunto',
 } as const;
 
 const ERROR_MESSAGES = {
@@ -94,6 +99,9 @@ const ERROR_MESSAGES = {
   UPDATE_ERROR: 'Error al actualizar la reunión',
   DELETE_ERROR: 'Error al eliminar la reunión',
   EMAIL_ERROR: 'Error al enviar el correo',
+  START_ERROR: 'Error al iniciar la reunión',
+  END_ERROR: 'Error al terminar la reunión',
+  ANNOTATION_ERROR: 'Error al actualizar las anotaciones',
 } as const;
 
 export function useMeetings(organizacionId?: string): UseMeetingsReturn {
@@ -344,6 +352,83 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       return false;
     }
   }, []);
+  const startMeeting = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      setError(null);
+
+      const response = await fetch(`${API_ENDPOINTS.START_MEETING}?id=${id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Actualizar el estado de la reunión a "en curso"
+        setMeetings(prev => prev.map(meeting => 
+          meeting._id === id ? { ...meeting, estado: 'En Curso' } : meeting
+        ));
+        return true;
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || ERROR_MESSAGES.START_ERROR);
+        return false;
+      }    } catch (error) {
+      console.error('Error starting meeting:', error);
+      setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al iniciar la reunión`));
+      return false;
+    }
+  }, []);
+  const endMeeting = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      setError(null);
+
+      const response = await fetch(`${API_ENDPOINTS.END_MEETING}?id=${id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Actualizar el estado de la reunión a "finalizada"
+        setMeetings(prev => prev.map(meeting => 
+          meeting._id === id ? { ...meeting, estado: 'Finalizada' } : meeting
+        ));
+        return true;
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || ERROR_MESSAGES.END_ERROR);
+        return false;
+      }    } catch (error) {
+      console.error('Error ending meeting:', error);
+      setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al terminar la reunión`));
+      return false;
+    }
+  }, []);  const updatePointAnnotations = useCallback(async (pointId: string, annotations: string): Promise<boolean> => {
+    try {
+      setError(null);
+
+      const response = await fetch(API_ENDPOINTS.UPDATE_POINT_ANNOTATIONS, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: pointId, anotaciones: annotations }),
+      });
+
+      if (response.ok) {
+        return true;
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || ERROR_MESSAGES.ANNOTATION_ERROR);
+        return false;
+      }    } catch (error) {
+      console.error('Error updating point annotations:', error);
+      setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al actualizar las anotaciones`));
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     if (organizacionId) {
@@ -360,6 +445,9 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
     deleteMeeting,
     getMeeting,
     sendEmail,
+    startMeeting,
+    endMeeting,
+    updatePointAnnotations,
     refetch: fetchMeetings,
   };
   
