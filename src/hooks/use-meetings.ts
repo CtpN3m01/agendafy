@@ -64,8 +64,14 @@ export interface EmailData {
     modalidad: string;
     archivos: string[];
     agenda: string;
-    puntos: string[];
+    puntos: {
+      duracion: number;
+      titulo: string;
+      tipo: string;
+      expositor: string;
+    }[];
     convocados: ConvocadoDTO[];
+    organizacionId: string; // Added organization ID
   };
 }
 

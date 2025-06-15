@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { useMeetings, type ReunionData } from "@/hooks/use-meetings";
 import { useUserOrganization } from "@/hooks/use-user-organization";
+import { toast } from "sonner";
 
 export default function MeetingDetailPage() {
   const params = useParams();
@@ -44,6 +45,7 @@ export default function MeetingDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const meetingId = params?.id as string;
 
@@ -137,9 +139,73 @@ export default function MeetingDetailPage() {
       setIsDeleting(false);
     }
   };
-  const handleSendEmail = () => {
-    // TODO: Implementar lógica de envío de correo
-    console.log("Enviar correo para reunión:", meetingId);
+
+  const handleSendEmail = async () => {
+    if (!meeting || !meeting.convocados || meeting.convocados.length === 0) {
+      toast.error("No hay convocados para enviar el correo");
+      return;
+    }
+
+    if (!organization?.id) {
+      toast.error("No se pudo obtener la información de la organización");
+      return;
+    }
+
+    try {
+      setIsSendingEmail(true);
+      
+      // Preparar la lista de correos de los convocados
+      const emailList = meeting.convocados
+        .filter(convocado => convocado.correo && convocado.correo.trim() !== '')
+        .map(convocado => convocado.correo);
+
+      if (emailList.length === 0) {
+        toast.error("No hay correos válidos para enviar");
+        return;
+      }
+
+      // Preparar los puntos para el email (convertir de string[] a objeto con propiedades)
+      const puntosForEmail = (meeting.puntos || []).map((punto, index) => ({
+        duracion: 30, // Duración por defecto
+        titulo: punto,
+        tipo: "Informativo", // Tipo por defecto
+        expositor: "Por definir" // Expositor por defecto
+      }));
+
+      // Preparar los datos del email según la estructura esperada por la API
+      const emailData = {
+        to: emailList,
+        subject: `Convocatoria: ${meeting.titulo}`,
+        detalles: {
+          titulo: meeting.titulo,
+          hora_inicio: meeting.hora_inicio,
+          hora_fin: meeting.hora_fin,
+          lugar: meeting.lugar,
+          tipo_reunion: meeting.tipo_reunion,
+          modalidad: meeting.modalidad,
+          archivos: meeting.archivos || [],
+          agenda: meeting.agenda,
+          puntos: puntosForEmail,
+          convocados: meeting.convocados,
+          organizacionId: organization.id // Include organization ID for file URLs
+        }
+      };
+
+      console.log("📧 Enviando correo con datos:", emailData);
+
+      const success = await sendEmail(emailData);
+      
+      if (success) {
+        toast.success(`Correo enviado exitosamente a ${emailList.length} destinatarios`);
+      } else {
+        toast.error("Error al enviar el correo");
+      }
+    } catch (error) {
+      console.error("Error al enviar correo:", error);
+      toast.error("Error al enviar el correo");
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   // Estados de carga y error
@@ -203,8 +269,13 @@ export default function MeetingDetailPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleSendEmail}
+                disabled={isSendingEmail}
               >
-                <Mail className="h-4 w-4 mr-2" />
+                {isSendingEmail ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Mail className="h-4 w-4 mr-2" />
+                )}
                 Enviar Correo
               </Button>
               <Button

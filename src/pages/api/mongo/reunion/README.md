@@ -274,8 +274,8 @@
     "tipo_reunion": "string",
     "modalidad": "string",
     "archivos": ["string"],
-    "agenda": "string",
-    "puntos": ["string"],
+    "agenda": "string", // titu;plo de la agenda
+    "puntos": [{"duracion": int, "titulo": "string", "tipo": "string", "expositor": "string"}], // puntos a tratar en la reunion
     "convocados": [
       {
         "nombre": "string",
