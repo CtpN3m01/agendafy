@@ -1,4 +1,4 @@
-import { TipoPunto } from '@/models/Punto';
+import { TipoPunto } from '@/types/punto-types';
 
 /*
 DTO define la forma de los datos que se transferirán entre capas 

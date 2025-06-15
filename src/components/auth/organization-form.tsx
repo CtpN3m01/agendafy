@@ -16,6 +16,7 @@ interface OrganizationData {
   telefono: string;
   direccion: string;
   logo?: File | null;
+  miembros?: string[]; // Opcional, si se desea agregar miembros al crear la organización
 }
 
 interface OrganizationFormProps {

@@ -1,7 +1,7 @@
-// src/components/reuniones/create-meeting-dialog.tsx
+// src/components/reuniones/edit-meeting-dialog.tsx
 "use client";
 
-import React, { useState, useRef, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CalendarDays, Clock, Users, Upload, Plus, FileText, X, Edit3 } from "lucide-react";
-import { useMeetings, type CreateReunionData } from "@/hooks/use-meetings";
+import { useMeetings, type CreateReunionData, type ReunionData } from "@/hooks/use-meetings";
 import { useAgendas } from "@/hooks/use-agendas";
 import { useUserOrganization } from "@/hooks/use-user-organization";
 import { useOrganizationMembers, type OrganizationMember } from "@/hooks/use-organization-members";
@@ -29,18 +29,19 @@ import { CreateAgendaDialog } from "@/components/agenda";
 import { type ConvocadoDTO } from "@/types/ReunionDTO";
 
 // Types
-interface CreateMeetingDialogProps {
+interface EditMeetingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateMeeting?: (data: CreateReunionData) => Promise<boolean>;
-  organizacionId?: string;
+  meeting: ReunionData;
+  onMeetingUpdated?: () => void;
 }
 
 interface FormData {
   titulo: string;
   agendaSeleccionada: string;
   convocados: ConvocadoDTO[];
-  archivos: File[]; // Mantener como File[] para archivos en memoria
+  archivos: File[]; // Nuevos archivos
+  archivosExistentes: string[]; // Archivos ya subidos
   hora: string;
   minutos: string;
   fecha: string;
@@ -49,26 +50,47 @@ interface FormData {
   lugar: string;
 }
 
-// Constants
-const INITIAL_FORM_STATE: FormData = {
-  titulo: "",
-  agendaSeleccionada: "",
-  convocados: [],
-  archivos: [],
-  hora: "09",
-  minutos: "00",
-  fecha: "",
-  tipoReunion: "Ordinaria",
-  modalidad: "Virtual",
-  lugar: "",
-};
-
 // Custom Hooks
-const useCreateMeetingForm = (organizacionId: string) => {
-  const [formData, setFormData] = useState<FormData>(INITIAL_FORM_STATE);
+const useEditMeetingForm = (meeting: ReunionData | null) => {
+  const [formData, setFormData] = useState<FormData>({
+    titulo: "",
+    agendaSeleccionada: "",
+    convocados: [],
+    archivos: [],
+    archivosExistentes: [],
+    hora: "09",
+    minutos: "00",
+    fecha: "",
+    tipoReunion: "Ordinaria",
+    modalidad: "Virtual",
+    lugar: "",
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  // Estado para el formulario de invitado externo
   const [guestForm, setGuestForm] = useState({ nombre: "", correo: "" });
+
+  // Cargar datos del meeting cuando cambie
+  useEffect(() => {
+    if (meeting) {
+      const meetingDate = new Date(meeting.hora_inicio);
+      const fecha = meetingDate.toISOString().split('T')[0];
+      const hora = meetingDate.getHours().toString().padStart(2, '0');
+      const minutos = meetingDate.getMinutes().toString().padStart(2, '0');
+
+      setFormData({
+        titulo: meeting.titulo || "",
+        agendaSeleccionada: meeting.agenda || "",
+        convocados: meeting.convocados || [],
+        archivos: [],
+        archivosExistentes: meeting.archivos || [],
+        hora,
+        minutos,
+        fecha,
+        tipoReunion: meeting.tipo_reunion || "Ordinaria",
+        modalidad: meeting.modalidad || "Virtual",
+        lugar: meeting.lugar || "",
+      });
+    }
+  }, [meeting]);
 
   const validateForm = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
@@ -93,12 +115,6 @@ const useCreateMeetingForm = (organizacionId: string) => {
     return Object.keys(newErrors).length === 0;
   }, [formData.titulo, formData.fecha, formData.hora, formData.agendaSeleccionada]);
 
-  const resetForm = useCallback(() => {
-    setFormData(INITIAL_FORM_STATE);
-    setErrors({});
-    setGuestForm({ nombre: "", correo: "" });
-  }, []);
-
   const updateFormData = useCallback((updates: Partial<FormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
   }, []);
@@ -108,13 +124,11 @@ const useCreateMeetingForm = (organizacionId: string) => {
       const exists = prev.convocados.find(c => c.correo === member.correo);
       
       if (exists) {
-        // Remover convocado
         return {
           ...prev,
           convocados: prev.convocados.filter(c => c.correo !== member.correo)
         };
       } else {
-        // Agregar convocado
         const convocado: ConvocadoDTO = {
           nombre: member.nombre,
           correo: member.correo,
@@ -142,6 +156,13 @@ const useCreateMeetingForm = (organizacionId: string) => {
     }));
   }, []);
 
+  const removeExistingFile = useCallback((index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      archivosExistentes: prev.archivosExistentes.filter((_, i) => i !== index),
+    }));
+  }, []);
+
   const isConvocadoSelected = useCallback((member: OrganizationMember): boolean => {
     return formData.convocados.some(c => c.correo === member.correo);
   }, [formData.convocados]);
@@ -149,15 +170,12 @@ const useCreateMeetingForm = (organizacionId: string) => {
   const addExternalGuest = useCallback(() => {
     const { nombre, correo } = guestForm;
     
-    // Validación simple
     if (!nombre.trim() || !correo.trim()) return false;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) return false;
     
-    // Verificar que no exista ya
     const exists = formData.convocados.some(c => c.correo.toLowerCase() === correo.toLowerCase());
     if (exists) return false;
     
-    // Agregar convocado externo
     const nuevoConvocado: ConvocadoDTO = {
       nombre: nombre.trim(),
       correo: correo.trim().toLowerCase(),
@@ -169,7 +187,6 @@ const useCreateMeetingForm = (organizacionId: string) => {
       convocados: [...prev.convocados, nuevoConvocado]
     }));
     
-    // Limpiar formulario
     setGuestForm({ nombre: "", correo: "" });
     return true;
   }, [guestForm, formData.convocados]);
@@ -187,11 +204,11 @@ const useCreateMeetingForm = (organizacionId: string) => {
     guestForm,
     setGuestForm,
     validateForm,
-    resetForm,
     updateFormData,
     toggleConvocado,
     addFiles,
     removeFile,
+    removeExistingFile,
     isConvocadoSelected,
     addExternalGuest,
     removeConvocado,
@@ -222,6 +239,41 @@ const FileBadge = React.memo(({ file, index, onRemove }: {
     </button>
   </div>
 ));
+
+const ExistingFileBadge = React.memo(({ fileName, index, onRemove, organizationId }: { 
+  fileName: string; 
+  index: number; 
+  onRemove: (index: number) => void;
+  organizationId: string;
+}) => {
+  const filename = fileName.split('/').pop() || fileName;
+  const bucketUrl = process.env.NEXT_PUBLIC_SUPABASE_BUCKET_URL;
+  const fileUrl = `${bucketUrl}/${organizationId}/${filename}`;
+
+  return (
+    <div className="flex items-center justify-between bg-blue-50 p-2 rounded-md border border-blue-200">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <FileText className="h-4 w-4 flex-shrink-0 text-blue-600" />
+        <a
+          href={fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm truncate text-blue-600 hover:text-blue-800 hover:underline"
+          title={filename}
+        >
+          {filename}
+        </a>
+      </div>
+      <button
+        type="button"
+        onClick={() => onRemove(index)}
+        className="text-red-500 hover:text-red-700 flex-shrink-0 ml-2"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+});
 
 const MemberButton = React.memo(({ 
   member, 
@@ -262,47 +314,40 @@ const MemberButton = React.memo(({
 ));
 
 // Main Component
-export function CreateMeetingDialog({ 
+export function EditMeetingDialog({ 
   open, 
   onOpenChange, 
-  onCreateMeeting,
-  organizacionId = ""
-}: CreateMeetingDialogProps) {
-
+  meeting,
+  onMeetingUpdated
+}: EditMeetingDialogProps) {
   const { organization } = useUserOrganization();
-  
-  // Usar la organización del usuario o la que se pasa como prop
-  const currentOrganizationId = useMemo(() => 
-    organizacionId || organization?.id || "", 
-    [organizacionId, organization?.id]
-  );
-  
+  const organizationId = organization?.id || "";
 
-  // Hooks - usar currentOrganizationId en lugar de organizacionId
-  const { createMeeting, refetch } = useMeetings(currentOrganizationId);
-  
+  // Hooks
+  const { updateMeeting, refetch } = useMeetings(organizationId);
   const { agendas, isLoading: agendasLoading, refetch: refetchAgendas } = useAgendas(
-    open ? currentOrganizationId : undefined
+    open ? organizationId : undefined
   );
   const { members, isLoading: membersLoading } = useOrganizationMembers(
-    open ? currentOrganizationId : undefined
+    open ? organizationId : undefined
   );
+  
   const {
     formData,
     errors,
     guestForm,
     setGuestForm,
     validateForm,
-    resetForm,
     updateFormData,
     toggleConvocado,
     addFiles,
     removeFile,
+    removeExistingFile,
     isConvocadoSelected,
     addExternalGuest,
     removeConvocado,
     setErrors,
-  } = useCreateMeetingForm(currentOrganizationId);
+  } = useEditMeetingForm(meeting);
 
   // State
   const [isLoading, setIsLoading] = useState(false);
@@ -327,59 +372,51 @@ export function CreateMeetingDialog({
     setErrors({});
 
     try {
-      // Convertir la hora a formato ISO
       const horaInicio = `${formData.fecha}T${formData.hora}:${formData.minutos}:00.000Z`;
       
-      const meetingData: CreateReunionData = {
+      const updateData: Partial<CreateReunionData> = {
         titulo: formData.titulo,
-        organizacion: currentOrganizationId,
         hora_inicio: horaInicio,
         lugar: formData.lugar,
         tipo_reunion: formData.tipoReunion,
         modalidad: formData.modalidad,
         agenda: formData.agendaSeleccionada,
         convocados: formData.convocados,
-        archivosFiles: formData.archivos, // Pasar los archivos en memoria al hook
+        archivos: formData.archivosExistentes,
+        archivosFiles: formData.archivos, // Nuevos archivos
       };
 
-      if (typeof createMeeting !== 'function') {
-        setErrors({ general: "Error: createMeeting no está disponible" });
-        return;
-      }
+      const result = await updateMeeting(meeting._id, updateData);
       
-      // El hook se encarga de subir los archivos y crear la reunión
-      const result = await createMeeting(meetingData);
-      const success = !!result;
-
-      if (success) {
-        // Refrescar la lista de reuniones desde el servidor
+      if (result) {
         await refetch();
-        resetForm();
+        onMeetingUpdated?.();
         onOpenChange(false);
       } else {
-        setErrors({ general: "Error al crear la reunión" });
+        setErrors({ general: "Error al actualizar la reunión" });
       }
     } catch (error) {
-      setErrors({ general: "Error al crear la reunión" });
+      console.error("Error al actualizar reunión:", error);
+      setErrors({ general: "Error al actualizar la reunión" });
     } finally {
       setIsLoading(false);
     }
-  }, [formData, validateForm, createMeeting, refetch, currentOrganizationId, resetForm, onOpenChange, setErrors]);
+  }, [formData, validateForm, updateMeeting, meeting._id, refetch, onMeetingUpdated, onOpenChange, setErrors]);
 
   const handleCancel = useCallback(() => {
-    resetForm();
     onOpenChange(false);
-  }, [resetForm, onOpenChange]);
+  }, [onOpenChange]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[900px] lg:max-w-[1100px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CalendarDays className="h-5 w-5" />
-            Crear Nueva Reunión
+            <Edit3 className="h-5 w-5" />
+            Editar Reunión
           </DialogTitle>
           <DialogDescription>
-            Completa los detalles de la reunión que quieres crear.
+            Modifica los detalles de la reunión.
           </DialogDescription>
         </DialogHeader>
         
@@ -390,6 +427,7 @@ export function CreateMeetingDialog({
               {errors.general}
             </div>
           )}          
+          
           {/* Título */}
           <div className="space-y-2">
             <Label htmlFor="titulo" className="text-sm font-medium">
@@ -511,6 +549,27 @@ export function CreateMeetingDialog({
               <Upload className="h-4 w-4" />
               Archivos adjuntos
             </Label>
+            
+            {/* Archivos existentes */}
+            {formData.archivosExistentes.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs text-muted-foreground">
+                  Archivos actuales ({formData.archivosExistentes.length}):
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                  {formData.archivosExistentes.map((archivo, index) => (
+                    <ExistingFileBadge 
+                      key={index} 
+                      fileName={archivo} 
+                      index={index} 
+                      onRemove={removeExistingFile}
+                      organizationId={organizationId}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            
             <div className="flex items-center gap-2">
               <Input
                 type="file"
@@ -526,14 +585,15 @@ export function CreateMeetingDialog({
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Subir archivos
+                Agregar archivos
               </Button>
             </div>
             
+            {/* Nuevos archivos */}
             {formData.archivos.length > 0 && (
               <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">
-                  Archivos seleccionados ({formData.archivos.length}):
+                  Nuevos archivos ({formData.archivos.length}):
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                   {formData.archivos.map((file, index) => (
@@ -546,7 +606,6 @@ export function CreateMeetingDialog({
 
           {/* Fecha y Hora */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Fecha */}
             <div className="space-y-2">
               <Label htmlFor="fecha" className="text-sm font-medium flex items-center gap-2">
                 <CalendarDays className="h-4 w-4" />
@@ -564,7 +623,6 @@ export function CreateMeetingDialog({
               )}
             </div>
 
-            {/* Hora */}
             <div className="space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <Clock className="h-4 w-4" />
@@ -617,7 +675,6 @@ export function CreateMeetingDialog({
 
           {/* Configuración de la Reunión */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Tipo de Reunión */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">
                 Tipo de reunión
@@ -636,7 +693,6 @@ export function CreateMeetingDialog({
               </Select>
             </div>
 
-            {/* Modalidad */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">
                 Modalidad
@@ -654,7 +710,9 @@ export function CreateMeetingDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>          {/* Lugar o URL */}
+          </div>
+
+          {/* Lugar o URL */}
           <div className="space-y-2">
             <Label htmlFor="lugar" className="text-sm font-medium">
               {formData.modalidad === "Virtual" ? "URL de la reunión" : "Lugar"}
@@ -718,7 +776,7 @@ export function CreateMeetingDialog({
               
               {/* Botón para crear nueva agenda */}
               <CreateAgendaDialog
-                organizacionId={currentOrganizationId}
+                organizacionId={organizationId}
                 availableFiles={formData.archivos}
                 convocados={formData.convocados}
                 onAgendaCreated={(agenda) => {
@@ -750,7 +808,7 @@ export function CreateMeetingDialog({
           {/* Diálogo de Edición de Agenda */}
           {editingAgenda && (
             <CreateAgendaDialog
-              organizacionId={currentOrganizationId}
+              organizacionId={organizationId}
               availableFiles={formData.archivos}
               convocados={formData.convocados}
               editMode={true}
@@ -764,7 +822,6 @@ export function CreateMeetingDialog({
               }}
             />
           )}
-
         </form>
 
         <DialogFooter>
@@ -778,12 +835,10 @@ export function CreateMeetingDialog({
           </Button>          
           <Button 
             type="submit" 
-            onClick={(e) => {
-              handleSubmit(e);
-            }}
+            onClick={handleSubmit}
             disabled={isLoading || !formData.titulo.trim() || !formData.fecha || !formData.agendaSeleccionada}
           >
-            {isLoading ? "Creando..." : "Crear Reunión"}
+            {isLoading ? "Guardando..." : "Guardar Cambios"}
           </Button>
         </DialogFooter>
       </DialogContent>

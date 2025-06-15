@@ -11,6 +11,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await connectToDatabase();
         const reunionService = new ReunionService();
         const reunionData = req.body;
+        
+        // Validación actualizada para coincidir con los datos del hook
         if (!reunionData.titulo || 
             !reunionData.organizacion || 
             !reunionData.hora_inicio || 
@@ -19,7 +21,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             !reunionData.modalidad ||
             !reunionData.agenda
         ) {
-            return res.status(400).json({ message: 'Datos incompletos' });
+            return res.status(400).json({ 
+                message: 'Datos incompletos',
+                missing: {
+                    titulo: !reunionData.titulo,
+                    organizacion: !reunionData.organizacion,
+                    hora_inicio: !reunionData.hora_inicio,
+                    lugar: !reunionData.lugar,
+                    tipo_reunion: !reunionData.tipo_reunion,
+                    modalidad: !reunionData.modalidad,
+                    agenda: !reunionData.agenda
+                }
+            });
         }
 
         const nuevaReunion = await reunionService.crearReunion(reunionData);
