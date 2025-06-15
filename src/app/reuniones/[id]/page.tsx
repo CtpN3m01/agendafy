@@ -206,7 +206,6 @@ export default function MeetingDetailPage() {
       setIsDeleting(false);
     }
   };
-
   const handleSendEmail = async () => {
     if (!meeting || !meeting.convocados || meeting.convocados.length === 0) {
       toast.error("No hay convocados para enviar el correo");
@@ -221,51 +220,108 @@ export default function MeetingDetailPage() {
     try {
       setIsSendingEmail(true);
       
-      // Preparar la lista de correos de los convocados
-      const emailList = meeting.convocados
-        .filter(convocado => convocado.correo && convocado.correo.trim() !== '')
-        .map(convocado => convocado.correo);
+      // Separar convocados por tipo (miembros y no miembros)
+      const miembros = meeting.convocados.filter(convocado => 
+        convocado.esMiembro && convocado.correo && convocado.correo.trim() !== ''
+      );
+      
+      const noMiembros = meeting.convocados.filter(convocado => 
+        !convocado.esMiembro && convocado.correo && convocado.correo.trim() !== ''
+      );
 
-      if (emailList.length === 0) {
+      if (miembros.length === 0 && noMiembros.length === 0) {
         toast.error("No hay correos válidos para enviar");
         return;
       }
 
-      // Preparar los puntos para el email (convertir de string[] a objeto con propiedades)
-      const puntosForEmail = (meeting.puntos || []).map((punto, index) => ({
-        duracion: 30, // Duración por defecto
-        titulo: punto,
-        tipo: "Informativo", // Tipo por defecto
-        expositor: "Por definir" // Expositor por defecto
-      }));
+      // Usar puntos detallados si están disponibles, si no usar los básicos
+      const puntosParaEmail = puntosDetallados.length > 0 
+        ? puntosDetallados.map(punto => ({
+            duracion: punto.duracion,
+            titulo: punto.titulo,
+            tipo: punto.tipo,
+            expositor: punto.expositor,
+            detalles: punto.detalles
+          }))
+        : (meeting.puntos || []).map((punto, index) => ({
+            duracion: 30, // Duración por defecto
+            titulo: punto,
+            tipo: "Informativo", // Tipo por defecto
+            expositor: "Por definir", // Expositor por defecto
+            detalles: ""
+          }));
 
-      // Preparar los datos del email según la estructura esperada por la API
-      const emailData = {
-        to: emailList,
-        subject: `Convocatoria: ${meeting.titulo}`,
-        detalles: {
-          titulo: meeting.titulo,
-          hora_inicio: meeting.hora_inicio,
-          hora_fin: meeting.hora_fin,
-          lugar: meeting.lugar,
-          tipo_reunion: meeting.tipo_reunion,
-          modalidad: meeting.modalidad,
-          archivos: meeting.archivos || [],
-          agenda: meeting.agenda,
-          puntos: puntosForEmail,
-          convocados: meeting.convocados,
-          organizacionId: organization.id // Include organization ID for file URLs
+      const emailsEnviados = [];
+
+      // Enviar correo completo a miembros
+      if (miembros.length > 0) {
+        const emailDataMiembros = {
+          to: miembros.map(m => m.correo),
+          subject: `Convocatoria: ${meeting.titulo}`,
+          detalles: {
+            titulo: meeting.titulo,
+            hora_inicio: meeting.hora_inicio,
+            hora_fin: meeting.hora_fin,
+            lugar: meeting.lugar,
+            tipo_reunion: meeting.tipo_reunion,
+            modalidad: meeting.modalidad,
+            archivos: meeting.archivos || [],
+            agenda: agendaDetallada?.nombre || meeting.agenda || "",
+            puntos: puntosParaEmail,
+            convocados: meeting.convocados,
+            organizacionId: organization.id,
+            esMiembro: true // Indicar que son miembros
+          }
+        };
+
+        const successMiembros = await sendEmail(emailDataMiembros);
+        if (successMiembros) {
+          emailsEnviados.push(`${miembros.length} miembros`);
         }
-      };
+      }
 
-      console.log("📧 Enviando correo con datos:", emailData);
+      // Enviar correo limitado a no miembros con horario calculado
+      if (noMiembros.length > 0) {
+        // Calcular horarios de entrada para cada no miembro
+        const noMiembrosConHorario = await Promise.all(
+          noMiembros.map(async (noMiembro) => {
+            const horarioEntrada = calcularHorarioEntrada(noMiembro, puntosParaEmail, meeting.hora_inicio);
+            return {
+              ...noMiembro,
+              horario_entrada: horarioEntrada
+            };
+          })
+        );
 
-      const success = await sendEmail(emailData);
-      
-      if (success) {
-        toast.success(`Correo enviado exitosamente a ${emailList.length} destinatarios`);
+        const emailDataNoMiembros = {
+          to: noMiembros.map(nm => nm.correo),
+          subject: `Convocatoria: ${meeting.titulo}`,
+          detalles: {
+            titulo: meeting.titulo,
+            hora_inicio: meeting.hora_inicio,
+            hora_fin: meeting.hora_fin,
+            lugar: meeting.lugar,
+            tipo_reunion: meeting.tipo_reunion,
+            modalidad: meeting.modalidad,
+            archivos: [], // No archivos para no miembros
+            agenda: "", // No agenda detallada para no miembros
+            puntos: [], // No puntos para no miembros
+            convocados: noMiembrosConHorario,
+            organizacionId: organization.id,
+            esMiembro: false // Indicar que no son miembros
+          }
+        };
+
+        const successNoMiembros = await sendEmail(emailDataNoMiembros);
+        if (successNoMiembros) {
+          emailsEnviados.push(`${noMiembros.length} invitados`);
+        }
+      }
+
+      if (emailsEnviados.length > 0) {
+        toast.success(`Correo enviado exitosamente a: ${emailsEnviados.join(', ')}`);
       } else {
-        toast.error("Error al enviar el correo");
+        toast.error("Error al enviar los correos");
       }
     } catch (error) {
       console.error("Error al enviar correo:", error);
@@ -273,6 +329,50 @@ export default function MeetingDetailPage() {
     } finally {
       setIsSendingEmail(false);
     }
+  };
+  // Función para calcular el horario de entrada según los puntos de la agenda
+  const calcularHorarioEntrada = (convocado: any, puntos: any[], horaInicio: string) => {
+    const fechaInicio = new Date(horaInicio);
+    let tiempoAcumulado = 0;
+    
+    // Lógica más sofisticada para determinar cuándo debe entrar cada no miembro
+    // Buscar si el convocado está mencionado en algún punto específico como expositor
+    const puntoDelConvocado = puntos.findIndex(punto => 
+      punto.expositor && punto.expositor.toLowerCase().includes(convocado.nombre.toLowerCase())
+    );
+    
+    if (puntoDelConvocado !== -1) {
+      // El convocado es expositor de un punto específico
+      // Calcular tiempo hasta ese punto
+      for (let i = 0; i < puntoDelConvocado; i++) {
+        tiempoAcumulado += puntos[i].duracion || 30;
+      }
+      // Entrar 15 minutos antes del punto donde debe exponer
+      tiempoAcumulado = Math.max(0, tiempoAcumulado - 15);
+    } else {
+      // Estrategia por defecto: entrar después de puntos administrativos iniciales
+      // Los primeros puntos suelen ser: verificación de quórum, aprobación de acta anterior, etc.
+      const puntosAdministrativos = Math.min(2, Math.floor(puntos.length * 0.3));
+      
+      for (let i = 0; i < puntosAdministrativos; i++) {
+        tiempoAcumulado += puntos[i].duracion || 30;
+      }
+      
+      // Si hay muchos puntos, calcular un momento estratégico
+      if (puntos.length > 5) {
+        // Entrar en el 30% de la reunión para puntos importantes
+        const duracionTotal = puntos.reduce((total, punto) => total + (punto.duracion || 30), 0);
+        tiempoAcumulado = Math.floor(duracionTotal * 0.3);
+      }
+    }
+    
+    const fechaEntrada = new Date(fechaInicio.getTime() + (tiempoAcumulado * 60000));
+    
+    return fechaEntrada.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
   };
 
   // Estados de carga y error
