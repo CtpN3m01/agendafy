@@ -43,6 +43,7 @@ export default function MeetingDetailPage() {
   const [meeting, setMeeting] = useState<ReunionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const meetingId = params?.id as string;
 
@@ -117,8 +118,24 @@ export default function MeetingDetailPage() {
   };
 
   const handleDelete = async () => {
-    // TODO: Implementar lógica de eliminación
-    console.log("Eliminar reunión:", meetingId);
+    if (!meetingId) return;
+    
+    try {
+      setIsDeleting(true);
+      const success = await deleteMeeting(meetingId);
+      
+      if (success) {
+        // Redirigir a la lista de reuniones después de eliminar exitosamente
+        router.push("/reuniones");
+      } else {
+        // El error ya se maneja en el hook, pero podemos mostrar una notificación adicional si es necesario
+        console.error("No se pudo eliminar la reunión");
+      }
+    } catch (err) {
+      console.error("Error al eliminar la reunión:", err);
+    } finally {
+      setIsDeleting(false);
+    }
   };
   const handleSendEmail = () => {
     // TODO: Implementar lógica de envío de correo
@@ -203,8 +220,13 @@ export default function MeetingDetailPage() {
                   <Button
                     variant="destructive"
                     size="sm"
+                    disabled={isDeleting}
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    {isDeleting ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 mr-2" />
+                    )}
                     Eliminar
                   </Button>
                 </AlertDialogTrigger>

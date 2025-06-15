@@ -278,8 +278,8 @@ export function CreateMeetingDialog({
   );
   
 
-    // Hooks - usar currentOrganizationId en lugar de organizacionId
-  const { createMeeting } = useMeetings(currentOrganizationId);
+  // Hooks - usar currentOrganizationId en lugar de organizacionId
+  const { createMeeting, refetch } = useMeetings(currentOrganizationId);
   
   const { agendas, isLoading: agendasLoading, refetch: refetchAgendas } = useAgendas(
     open ? currentOrganizationId : undefined
@@ -314,7 +314,9 @@ export function CreateMeetingDialog({
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     addFiles(files);
-  }, [addFiles]);  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  }, [addFiles]);
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -350,6 +352,8 @@ export function CreateMeetingDialog({
       const success = !!result;
 
       if (success) {
+        // Refrescar la lista de reuniones desde el servidor
+        await refetch();
         resetForm();
         onOpenChange(false);
       } else {
@@ -360,7 +364,7 @@ export function CreateMeetingDialog({
     } finally {
       setIsLoading(false);
     }
-  }, [formData, validateForm, createMeeting, currentOrganizationId, resetForm, onOpenChange, setErrors]);
+  }, [formData, validateForm, createMeeting, refetch, currentOrganizationId, resetForm, onOpenChange, setErrors]);
 
   const handleCancel = useCallback(() => {
     resetForm();
