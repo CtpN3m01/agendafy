@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +30,10 @@ import {
   Trash2,
   Mail,
   FileText,
-  Loader2
+  Loader2,
+  Play,
+  Square,
+  Save
 } from "lucide-react";
 import { useMeetings, type ReunionData } from "@/hooks/use-meetings";
 import { useUserOrganization } from "@/hooks/use-user-organization";
@@ -54,21 +58,25 @@ interface PuntoDetallado {
   expositor: string;
   archivos?: string[];
   agenda: string;
+  anotaciones?: string;
 }
 
 export default function MeetingDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { organization } = useUserOrganization();
-  const { getMeeting, deleteMeeting, sendEmail } = useMeetings(organization?.id);
+  const { getMeeting, deleteMeeting, sendEmail, startMeeting, endMeeting, updatePointAnnotations } = useMeetings(organization?.id);
   const [meeting, setMeeting] = useState<ReunionData | null>(null);
   const [agendaDetallada, setAgendaDetallada] = useState<AgendaDetallada | null>(null);
   const [puntosDetallados, setPuntosDetallados] = useState<PuntoDetallado[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);  const [isDeleting, setIsDeleting] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isStartingMeeting, setIsStartingMeeting] = useState(false);
+  const [isEndingMeeting, setIsEndingMeeting] = useState(false);
+  const [pointAnnotations, setPointAnnotations] = useState<Record<string, string>>({});
+  const [savingAnnotations, setSavingAnnotations] = useState<Record<string, boolean>>({});
 
   const meetingId = params?.id as string;
   // Cargar datos de la reunión y agenda detallada
@@ -110,12 +118,20 @@ export default function MeetingDetailPage() {
         if (agendaResponse.ok) {
           const agendaData = await agendaResponse.json();
           setAgendaDetallada(agendaData);
-          
-          // Cargar puntos detallados de la agenda
+            // Cargar puntos detallados de la agenda
           const puntosResponse = await fetch(`/api/mongo/punto/obtenerPuntosPorAgenda?agendaId=${agendaId}`);
           if (puntosResponse.ok) {
             const puntosData = await puntosResponse.json();
             setPuntosDetallados(puntosData);
+            
+            // Cargar las anotaciones existentes en el estado local
+            const anotacionesExistentes: Record<string, string> = {};
+            puntosData.forEach((punto: any) => {
+              if (punto.anotaciones) {
+                anotacionesExistentes[punto._id] = punto.anotaciones;
+              }
+            });
+            setPointAnnotations(anotacionesExistentes);
           }
         }
       } catch (err) {
@@ -237,6 +253,91 @@ export default function MeetingDetailPage() {
       setIsDeleting(false);
     }
   };
+
+  // Función para iniciar la reunión
+  const handleStartMeeting = async () => {
+    if (!meetingId) return;
+    
+    try {
+      setIsStartingMeeting(true);
+      const success = await startMeeting(meetingId);
+      
+      if (success) {
+        // Recargar los datos de la reunión para mostrar la nueva hora de inicio
+        const updatedMeeting = await getMeeting(meetingId);
+        if (updatedMeeting) {
+          setMeeting(updatedMeeting);
+        }
+        toast.success("Reunión iniciada exitosamente");
+      }
+    } catch (error) {
+      console.error("Error al iniciar la reunión:", error);
+      toast.error("Error al iniciar la reunión");
+    } finally {
+      setIsStartingMeeting(false);
+    }
+  };
+
+  // Función para terminar la reunión
+  const handleEndMeeting = async () => {
+    if (!meetingId) return;
+    
+    try {
+      setIsEndingMeeting(true);
+      const success = await endMeeting(meetingId);
+      
+      if (success) {
+        // Recargar los datos de la reunión para mostrar la nueva hora de fin
+        const updatedMeeting = await getMeeting(meetingId);
+        if (updatedMeeting) {
+          setMeeting(updatedMeeting);
+        }
+        toast.success("Reunión terminada exitosamente");
+      }
+    } catch (error) {
+      console.error("Error al terminar la reunión:", error);
+      toast.error("Error al terminar la reunión");
+    } finally {
+      setIsEndingMeeting(false);
+    }
+  };
+
+  // Función para guardar anotaciones de un punto
+  const handleSaveAnnotations = async (pointId: string) => {
+    const annotations = pointAnnotations[pointId] || '';
+    
+    try {
+      setSavingAnnotations(prev => ({ ...prev, [pointId]: true }));
+      const success = await updatePointAnnotations(pointId, annotations);
+      
+      if (success) {
+        toast.success("Anotaciones guardadas exitosamente");
+      }
+    } catch (error) {
+      console.error("Error al guardar anotaciones:", error);
+      toast.error("Error al guardar las anotaciones");
+    } finally {
+      setSavingAnnotations(prev => ({ ...prev, [pointId]: false }));
+    }
+  };
+
+  // Función para manejar cambios en las anotaciones
+  const handleAnnotationChange = (pointId: string, value: string) => {
+    setPointAnnotations(prev => ({ ...prev, [pointId]: value }));
+  };
+
+  // Determinar el estado de la reunión
+  const isMeetingStarted = () => {
+    if (!meeting?.hora_inicio) return false;
+    const startTime = new Date(meeting.hora_inicio);
+    const now = new Date();
+    return startTime <= now;
+  };
+
+  const isMeetingEnded = () => {
+    return meeting?.hora_fin != null;
+  };
+
   const handleSendEmail = async () => {
     if (!meeting || !meeting.convocados || meeting.convocados.length === 0) {
       toast.error("No hay convocados para enviar el correo");
@@ -462,12 +563,11 @@ export default function MeetingDetailPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
+            <div className="flex items-center gap-2">              <Button
                 variant="outline"
                 size="sm"
                 onClick={handleSendEmail}
-                disabled={isSendingEmail}
+                disabled={isSendingEmail || isMeetingEnded()}
               >
                 {isSendingEmail ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -482,14 +582,14 @@ export default function MeetingDetailPage() {
                 onClick={handleEdit}
               >
                 <Edit3 className="h-4 w-4 mr-2" />
-                Editar
+                {isMeetingEnded() ? "Terminar Acta" : "Editar"}
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="destructive"
                     size="sm"
-                    disabled={isDeleting}
+                    disabled={isDeleting || isMeetingStarted()}
                   >
                     {isDeleting ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -518,13 +618,39 @@ export default function MeetingDetailPage() {
           </div>
 
           {/* Información principal */}
-          <Card>
-            <CardHeader>
+          <Card>            <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Información General</CardTitle>
-                <Badge variant="default">
-                  {meeting.tipo_reunion}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="default">
+                    {meeting.tipo_reunion}
+                  </Badge>
+                  {!isMeetingStarted() && !isMeetingEnded() && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleStartMeeting}
+                      disabled={isStartingMeeting}
+                    >
+                      {isStartingMeeting ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Play className="h-4 w-4 mr-2" />
+                      )}
+                      Iniciar Reunión
+                    </Button>
+                  )}
+                  {isMeetingStarted() && !isMeetingEnded() && (
+                    <Badge variant="outline" className="text-green-600 border-green-600">
+                      Reunión en Curso
+                    </Badge>
+                  )}
+                  {isMeetingEnded() && (
+                    <Badge variant="outline" className="text-gray-600 border-gray-600">
+                      Reunión Finalizada
+                    </Badge>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -735,8 +861,7 @@ export default function MeetingDetailPage() {
                               <span className="text-muted-foreground">{punto.expositor}</span>
                             </div>
                           </div>
-                          
-                          {/* Archivos del punto */}
+                            {/* Archivos del punto */}
                           {punto.archivos && punto.archivos.length > 0 && (
                             <div className="mt-3">
                               <p className="text-xs font-medium text-muted-foreground mb-2">
@@ -761,6 +886,33 @@ export default function MeetingDetailPage() {
                                     </a>
                                   );
                                 })}
+                              </div>
+                            </div>
+                          )}                          {/* Anotaciones del punto - Visible si la reunión ha iniciado (incluso si ha terminado) */}
+                          {isMeetingStarted() && (
+                            <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+                              <p className="text-sm font-medium mb-2">Anotaciones del punto:</p>
+                              <div className="space-y-2">
+                                <Textarea
+                                  placeholder="Escriba sus anotaciones aquí..."
+                                  value={pointAnnotations[punto._id] || ''}
+                                  onChange={(e) => handleAnnotationChange(punto._id, e.target.value)}
+                                  className="min-h-[80px] resize-none"
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleSaveAnnotations(punto._id)}
+                                  disabled={savingAnnotations[punto._id]}
+                                  className="w-full"
+                                >
+                                  {savingAnnotations[punto._id] ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <Save className="h-4 w-4 mr-2" />
+                                  )}
+                                  Guardar Anotaciones
+                                </Button>
                               </div>
                             </div>
                           )}
@@ -802,8 +954,27 @@ export default function MeetingDetailPage() {
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>          )}
+              </CardContent>            </Card>          )}
+
+          {/* Botón Terminar Reunión - Solo visible si la reunión ha iniciado pero no ha terminado */}
+          {isMeetingStarted() && !isMeetingEnded() && (
+            <div className="flex justify-center">
+              <Button
+                variant="destructive"
+                size="lg"
+                onClick={handleEndMeeting}
+                disabled={isEndingMeeting}
+                className="w-full max-w-md"
+              >
+                {isEndingMeeting ? (
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
+                  <Square className="h-5 w-5 mr-2" />
+                )}
+                Terminar Reunión
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Diálogo de Edición */}
