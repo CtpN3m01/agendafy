@@ -35,21 +35,41 @@ import { useMeetings, type ReunionData } from "@/hooks/use-meetings";
 import { useUserOrganization } from "@/hooks/use-user-organization";
 import { toast } from "sonner";
 
+// Interfaces para los datos detallados de agenda y puntos
+interface AgendaDetallada {
+  _id: string;
+  nombre: string;
+  organizacion: string;
+  puntos: string[];
+  reuniones: string[];
+}
+
+interface PuntoDetallado {
+  _id: string;
+  titulo: string;
+  tipo: string;
+  duracion: number;
+  detalles?: string;
+  expositor: string;
+  archivos?: string[];
+  agenda: string;
+}
+
 export default function MeetingDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { organization } = useUserOrganization();
   const { getMeeting, deleteMeeting, sendEmail } = useMeetings(organization?.id);
-  
-  const [meeting, setMeeting] = useState<ReunionData | null>(null);
+    const [meeting, setMeeting] = useState<ReunionData | null>(null);
+  const [agendaDetallada, setAgendaDetallada] = useState<AgendaDetallada | null>(null);
+  const [puntosDetallados, setPuntosDetallados] = useState<PuntoDetallado[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const meetingId = params?.id as string;
-
-  // Cargar datos de la reunión
+  // Cargar datos de la reunión y agenda detallada
   useEffect(() => {
     const loadMeeting = async () => {
       if (!meetingId) {
@@ -65,6 +85,11 @@ export default function MeetingDetailPage() {
         const data = await getMeeting(meetingId);
         if (data) {
           setMeeting(data);
+          
+          // Cargar información detallada de la agenda si existe
+          if (data.agenda) {
+            await loadAgendaDetallada(data.agenda);
+          }
         } else {
           setError("Reunión no encontrada");
         }
@@ -73,6 +98,26 @@ export default function MeetingDetailPage() {
         setError("Error al cargar la reunión");
       } finally {
         setIsLoading(false);
+      }
+    };
+
+    const loadAgendaDetallada = async (agendaId: string) => {
+      try {
+        // Cargar información de la agenda
+        const agendaResponse = await fetch(`/api/mongo/agenda/obtenerAgenda?id=${agendaId}&poblado=true`);
+        if (agendaResponse.ok) {
+          const agendaData = await agendaResponse.json();
+          setAgendaDetallada(agendaData);
+          
+          // Cargar puntos detallados de la agenda
+          const puntosResponse = await fetch(`/api/mongo/punto/obtenerPuntosPorAgenda?agendaId=${agendaId}`);
+          if (puntosResponse.ok) {
+            const puntosData = await puntosResponse.json();
+            setPuntosDetallados(puntosData);
+          }
+        }
+      } catch (err) {
+        console.error("Error al cargar agenda detallada:", err);
       }
     };
 
@@ -99,7 +144,6 @@ export default function MeetingDetailPage() {
       hour12: true
     }).format(date);
   };
-
   const formatDateTime = (dateStr: string) => {
     if (!dateStr) return "Sin fecha";
     const date = new Date(dateStr);
@@ -111,6 +155,29 @@ export default function MeetingDetailPage() {
       minute: '2-digit',
       hour12: true
     }).format(date);
+  };
+
+  const getTipoPuntoColor = (tipo: string) => {
+    switch (tipo) {
+      case 'Informativo':
+        return 'bg-blue-100 text-blue-800';
+      case 'Aprobacion':
+        return 'bg-green-100 text-green-800';
+      case 'Fondo':
+        return 'bg-purple-100 text-purple-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatDuracion = (minutos: number) => {
+    if (minutos < 60) {
+      return `${minutos} min`;
+    } else {
+      const horas = Math.floor(minutos / 60);
+      const mins = minutos % 60;
+      return mins > 0 ? `${horas}h ${mins}min` : `${horas}h`;
+    }
   };
 
   // Handlers para los botones de acción
@@ -373,13 +440,40 @@ export default function MeetingDetailPage() {
                   <h3 className="font-semibold mb-2">Ubicación</h3>
                   <p className="text-muted-foreground">{meeting.lugar}</p>
                 </div>
-              )}
-
-              {/* Agenda */}
-              {meeting.agenda && (
+              )}              {/* Agenda */}
+              {agendaDetallada && (
                 <div>
-                  <h3 className="font-semibold mb-2">Agenda</h3>
-                  <p className="text-muted-foreground">{meeting.agenda}</p>
+                  <h3 className="font-semibold mb-2 flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Agenda: {agendaDetallada.nombre}
+                  </h3>
+                  <div className="bg-muted/30 p-4 rounded-lg">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">Puntos totales:</span>
+                        <span className="ml-2 text-muted-foreground">{puntosDetallados.length}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Duración estimada:</span>
+                        <span className="ml-2 text-muted-foreground">
+                          {formatDuracion(puntosDetallados.reduce((total, punto) => total + punto.duracion, 0))}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Fallback para mostrar agenda simple si no hay datos detallados */}
+              {!agendaDetallada && meeting.agenda && (
+                <div>
+                  <h3 className="font-semibold mb-2 flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Descripción de la Agenda
+                  </h3>
+                  <div className="bg-muted/30 p-4 rounded-lg">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{meeting.agenda}</p>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -460,22 +554,120 @@ export default function MeetingDetailPage() {
                 </div>
               </CardContent>
             </Card>
-          )}
-
-          {/* Puntos de la reunión */}
-          {meeting.puntos && meeting.puntos.length > 0 && (
+          )}          {/* Puntos de la reunión - Información detallada */}
+          {puntosDetallados && puntosDetallados.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Puntos de la Reunión</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Orden del Día ({puntosDetallados.length} puntos)
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <div className="space-y-4">
+                  {puntosDetallados.map((punto, index) => (
+                    <div key={punto._id} className="border rounded-lg p-4 hover:bg-accent/20 transition-colors">
+                      <div className="flex gap-4">
+                        <div className="flex-shrink-0">
+                          <div className="flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground rounded-full text-sm font-medium">
+                            {index + 1}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0 space-y-3">
+                          {/* Título y tipo */}
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className="font-semibold text-base leading-tight">
+                              {punto.titulo}
+                            </h4>
+                            <Badge className={`text-xs ${getTipoPuntoColor(punto.tipo)}`}>
+                              {punto.tipo}
+                            </Badge>
+                          </div>
+                          
+                          {/* Detalles del punto */}
+                          {punto.detalles && (
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                              {punto.detalles}
+                            </p>
+                          )}
+                          
+                          {/* Información adicional */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">Duración:</span>
+                              <span className="text-muted-foreground">{formatDuracion(punto.duracion)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">Expositor:</span>
+                              <span className="text-muted-foreground">{punto.expositor}</span>
+                            </div>
+                          </div>
+                          
+                          {/* Archivos del punto */}
+                          {punto.archivos && punto.archivos.length > 0 && (
+                            <div className="mt-3">
+                              <p className="text-xs font-medium text-muted-foreground mb-2">
+                                Archivos relacionados:
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {punto.archivos.map((archivo, archivoIndex) => {
+                                  const filename = archivo.split('/').pop() || archivo;
+                                  const bucketUrl = process.env.NEXT_PUBLIC_SUPABASE_BUCKET_URL;
+                                  const fileUrl = `${bucketUrl}/${organization?.id}/${filename}`;
+                                  
+                                  return (
+                                    <a
+                                      key={archivoIndex}
+                                      href={fileUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs hover:bg-muted/80 transition-colors"
+                                    >
+                                      <FileText className="h-3 w-3" />
+                                      {filename}
+                                    </a>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Fallback para mostrar puntos simples si no hay datos detallados */}
+          {(!puntosDetallados || puntosDetallados.length === 0) && meeting.puntos && meeting.puntos.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Orden del Día ({meeting.puntos.length} puntos)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
                   {meeting.puntos.map((punto, index) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <span className="text-sm text-muted-foreground mt-1">
-                        {index + 1}.
-                      </span>
-                      <p className="text-sm">{punto}</p>
+                    <div key={index} className="flex gap-4 p-4 border rounded-lg hover:bg-accent/20 transition-colors">
+                      <div className="flex-shrink-0">
+                        <div className="flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground rounded-full text-sm font-medium">
+                          {index + 1}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm mb-1">
+                          Punto {index + 1}
+                        </h4>
+                        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                          {punto}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
