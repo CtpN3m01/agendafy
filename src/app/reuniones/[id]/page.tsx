@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { useMeetings, type ReunionData } from "@/hooks/use-meetings";
 import { useUserOrganization } from "@/hooks/use-user-organization";
+import { EditMeetingDialog } from "@/components/reuniones";
 import { toast } from "sonner";
 
 // Interfaces para los datos detallados de agenda y puntos
@@ -60,13 +61,14 @@ export default function MeetingDetailPage() {
   const router = useRouter();
   const { organization } = useUserOrganization();
   const { getMeeting, deleteMeeting, sendEmail } = useMeetings(organization?.id);
-    const [meeting, setMeeting] = useState<ReunionData | null>(null);
+  const [meeting, setMeeting] = useState<ReunionData | null>(null);
   const [agendaDetallada, setAgendaDetallada] = useState<AgendaDetallada | null>(null);
   const [puntosDetallados, setPuntosDetallados] = useState<PuntoDetallado[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const meetingId = params?.id as string;
   // Cargar datos de la reunión y agenda detallada
@@ -179,11 +181,40 @@ export default function MeetingDetailPage() {
       return mins > 0 ? `${horas}h ${mins}min` : `${horas}h`;
     }
   };
-
   // Handlers para los botones de acción
   const handleEdit = () => {
-    // TODO: Implementar lógica de edición
-    console.log("Editar reunión:", meetingId);
+    setEditDialogOpen(true);
+  };
+
+  const handleMeetingUpdated = async () => {
+    // Recargar los datos de la reunión después de actualizarla
+    if (meetingId) {
+      try {
+        const updatedMeeting = await getMeeting(meetingId);
+        if (updatedMeeting) {
+          setMeeting(updatedMeeting);
+          
+          // Recargar agenda detallada si cambió
+          if (updatedMeeting.agenda) {
+            const agendaResponse = await fetch(`/api/mongo/agenda/obtenerAgenda?id=${updatedMeeting.agenda}&poblado=true`);
+            if (agendaResponse.ok) {
+              const agendaData = await agendaResponse.json();
+              setAgendaDetallada(agendaData);
+              
+              const puntosResponse = await fetch(`/api/mongo/punto/obtenerPuntosPorAgenda?agendaId=${updatedMeeting.agenda}`);
+              if (puntosResponse.ok) {
+                const puntosData = await puntosResponse.json();
+                setPuntosDetallados(puntosData);
+              }
+            }
+          }
+        }
+        toast.success("Reunión actualizada exitosamente");
+      } catch (error) {
+        console.error("Error al recargar la reunión:", error);
+        toast.error("Error al recargar los datos de la reunión");
+      }
+    }
   };
 
   const handleDelete = async () => {
@@ -772,9 +803,18 @@ export default function MeetingDetailPage() {
                   ))}
                 </div>
               </CardContent>
-            </Card>
-          )}
+            </Card>          )}
         </div>
+
+        {/* Diálogo de Edición */}
+        {meeting && (
+          <EditMeetingDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            meeting={meeting}
+            onMeetingUpdated={handleMeetingUpdated}
+          />
+        )}
       </AppLayout>
     </ProtectedRoute>
   );

@@ -206,15 +206,38 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al crear la reunión`));
       return null;
     }
-  }, []);
-  const updateMeeting = useCallback(async (id: string, data: Partial<CreateReunionData>): Promise<ReunionData | null> => {
+  }, []);  const updateMeeting = useCallback(async (id: string, data: Partial<CreateReunionData>): Promise<ReunionData | null> => {
     try {
       setError(null);
 
+      // Extraer archivos nuevos y datos de la reunión
+      const { archivosFiles, ...reunionData } = data;
+      let archivosExistentes = reunionData.archivos || [];
+      
+      // Si hay archivos nuevos para subir, subirlos primero
+      if (archivosFiles && archivosFiles.length > 0 && reunionData.organizacion) {
+        console.log("📎 Subiendo nuevos archivos a Supabase con ID organización:", reunionData.organizacion);
+        
+        try {
+          const nuevosArchivos = await subirArchivos(archivosFiles, reunionData.organizacion);
+          console.log("✅ Nuevos archivos subidos exitosamente:", nuevosArchivos);
+          
+          // Combinar archivos existentes con nuevos archivos
+          archivosExistentes = [...archivosExistentes, ...nuevosArchivos];
+        } catch (fileError) {
+          console.error("❌ Error al subir nuevos archivos:", fileError);
+          setError("Error al subir los archivos adjuntos");
+          return null;
+        }
+      }
+
       const updateData = {
         _id: id,
-        ...data
+        ...reunionData,
+        archivos: archivosExistentes
       };
+
+      console.log("📡 Actualizando reunión con datos:", updateData);
 
       const response = await fetch(API_ENDPOINTS.UPDATE, {
         method: 'PUT',
@@ -226,6 +249,8 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
 
       if (response.ok) {
         const result = await response.json();
+        console.log("✅ Reunión actualizada exitosamente:", result);
+        
         // Actualizar la lista local
         setMeetings(prev => prev.map(meeting => 
           meeting._id === id ? result.reunion : meeting
@@ -233,10 +258,12 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
         return result.reunion;
       } else {
         const errorData = await response.json();
+        console.log("❌ Error del servidor al actualizar:", errorData);
         setError(errorData.message || ERROR_MESSAGES.UPDATE_ERROR);
         return null;
-      }    } catch (error) {
-      console.error('Error updating meeting:', error);
+      }
+    } catch (error) {
+      console.error('❌ Error en updateMeeting hook:', error);
       setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al actualizar la reunión`));
       return null;
     }
