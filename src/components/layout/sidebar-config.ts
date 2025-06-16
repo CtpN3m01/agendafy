@@ -2,7 +2,8 @@ import {
   Calendar, 
   UserCircle, 
   Building, 
-  Video
+  Video,
+  FileText
 } from "lucide-react";
 import { SidebarConfig } from "./types";
 
@@ -13,6 +14,11 @@ export const defaultSidebarConfig: SidebarConfig = {
     {
       title: "Principal",
       items: [
+        {
+          title: "Agenda",
+          icon: FileText,
+          href: "/agenda",
+        },
         {
           title: "Reuniones",
           icon: Video,
