@@ -65,7 +65,6 @@ export function OrganizationContainer() {
       </Card>
     );
   }
-
   // Si hay organización, mostrar la información
-  return <OrganizationInfo organization={organization} />;
+  return <OrganizationInfo organization={organization} onUpdate={refetch} />;
 }

@@ -3,18 +3,32 @@ import nodemailer from 'nodemailer';
 
 export class EmailService {
   private transporter;
+  private emailConfigured: boolean;
 
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
-      },
-    });
+    const gmailUser = process.env.GMAIL_USER;
+    const gmailPassword = process.env.GMAIL_APP_PASSWORD;
+    
+    this.emailConfigured = !!(gmailUser && gmailPassword);
+    
+    if (this.emailConfigured) {
+      this.transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: gmailUser,
+          pass: gmailPassword,
+        },
+      });
+    } else {
+      console.warn('Email service not configured. Gmail credentials missing in environment variables.');
+    }
   }
-
   async enviarCorreoRecuperacion(email: string, token: string): Promise<void> {
+    if (!this.emailConfigured) {
+      console.warn('Email service not configured. Skipping email sending.');
+      return;
+    }
+
     const resetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/reset-password?token=${token}`;
     
     const mailOptions = {
@@ -39,10 +53,14 @@ export class EmailService {
       `,
     };
 
-    await this.transporter.sendMail(mailOptions);
+    await this.transporter!.sendMail(mailOptions);
   }
-
   async enviarCorreoBienvenida(email: string, nombre: string): Promise<void> {
+    if (!this.emailConfigured) {
+      console.warn('Email service not configured. Skipping welcome email.');
+      return;
+    }
+
     const mailOptions = {
       from: process.env.GMAIL_USER,
       to: email,
@@ -55,10 +73,9 @@ export class EmailService {
           <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/login" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
             Iniciar Sesión
           </a>
-        </div>
-      `,
+        </div>      `,
     };
 
-    await this.transporter.sendMail(mailOptions);
+    await this.transporter!.sendMail(mailOptions);
   }
 }
