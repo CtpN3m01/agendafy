@@ -15,14 +15,14 @@ export const defaultSidebarConfig: SidebarConfig = {
       title: "Principal",
       items: [
         {
-          title: "Agenda",
-          icon: FileText,
-          href: "/agenda",
-        },
-        {
           title: "Reuniones",
           icon: Video,
           href: "/reuniones",
+        },
+        {
+          title: "Agendas",
+          icon: FileText,
+          href: "/agenda",
         },
         {
           title: "Organización",
