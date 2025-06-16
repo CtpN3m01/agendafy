@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,8 +34,14 @@ import {
   Loader2,
   Play,
   Square,
-  Save
+  Save,
+  Timer,
+  Pause,
+  ThumbsUp,
+  ThumbsDown,
+  Vote
 } from "lucide-react";
+import { useAgendas, usePuntos } from "@/hooks/use-agendas";
 import { useMeetings, type ReunionData } from "@/hooks/use-meetings";
 import { useUserOrganization } from "@/hooks/use-user-organization";
 import { EditMeetingDialog } from "@/components/reuniones";
@@ -59,13 +66,15 @@ interface PuntoDetallado {
   archivos?: string[];
   agenda: string;
   anotaciones?: string;
+  votosAFavor?: number;
+  votosEnContra?: number;
 }
 
 export default function MeetingDetailPage() {
   const params = useParams();
-  const router = useRouter();
-  const { organization } = useUserOrganization();
+  const router = useRouter();  const { organization } = useUserOrganization();
   const { getMeeting, deleteMeeting, sendEmail, startMeeting, endMeeting, updatePointAnnotations } = useMeetings(organization?.id);
+  const { updatePunto } = usePuntos();
   const [meeting, setMeeting] = useState<ReunionData | null>(null);
   const [agendaDetallada, setAgendaDetallada] = useState<AgendaDetallada | null>(null);
   const [puntosDetallados, setPuntosDetallados] = useState<PuntoDetallado[]>([]);
@@ -74,9 +83,13 @@ export default function MeetingDetailPage() {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [isStartingMeeting, setIsStartingMeeting] = useState(false);
-  const [isEndingMeeting, setIsEndingMeeting] = useState(false);
-  const [pointAnnotations, setPointAnnotations] = useState<Record<string, string>>({});
+  const [isEndingMeeting, setIsEndingMeeting] = useState(false);  const [pointAnnotations, setPointAnnotations] = useState<Record<string, string>>({});
   const [savingAnnotations, setSavingAnnotations] = useState<Record<string, boolean>>({});
+  const [activePointId, setActivePointId] = useState<string | null>(null);
+  const [pointTimers, setPointTimers] = useState<Record<string, { startTime: Date; elapsed: number }>>({});
+  const [timerIntervals, setTimerIntervals] = useState<Record<string, NodeJS.Timeout>>({});
+  const [votosAFavor, setVotosAFavor] = useState<Record<string, number>>({});
+  const [votosEnContra, setVotosEnContra] = useState<Record<string, number>>({});
 
   const meetingId = params?.id as string;
   // Cargar datos de la reunión y agenda detallada
@@ -123,15 +136,24 @@ export default function MeetingDetailPage() {
           if (puntosResponse.ok) {
             const puntosData = await puntosResponse.json();
             setPuntosDetallados(puntosData);
-            
-            // Cargar las anotaciones existentes en el estado local
+              // Cargar las anotaciones existentes en el estado local
             const anotacionesExistentes: Record<string, string> = {};
+            const votosAFavorExistentes: Record<string, number> = {};
+            const votosEnContraExistentes: Record<string, number> = {};
             puntosData.forEach((punto: any) => {
               if (punto.anotaciones) {
                 anotacionesExistentes[punto._id] = punto.anotaciones;
               }
+              if (punto.votosAFavor !== undefined) {
+                votosAFavorExistentes[punto._id] = punto.votosAFavor;
+              }
+              if (punto.votosEnContra !== undefined) {
+                votosEnContraExistentes[punto._id] = punto.votosEnContra;
+              }
             });
             setPointAnnotations(anotacionesExistentes);
+            setVotosAFavor(votosAFavorExistentes);
+            setVotosEnContra(votosEnContraExistentes);
           }
         }
       } catch (err) {
@@ -277,13 +299,24 @@ export default function MeetingDetailPage() {
       setIsStartingMeeting(false);
     }
   };
-
   // Función para terminar la reunión
   const handleEndMeeting = async () => {
     if (!meetingId) return;
     
     try {
       setIsEndingMeeting(true);
+      
+      // Detener cualquier punto activo antes de terminar la reunión
+      if (activePointId && timerIntervals[activePointId]) {
+        clearInterval(timerIntervals[activePointId]);
+        setActivePointId(null);
+        setTimerIntervals(prev => {
+          const newIntervals = { ...prev };
+          delete newIntervals[activePointId];
+          return newIntervals;
+        });
+      }
+      
       const success = await endMeeting(meetingId);
       
       if (success) {
@@ -300,31 +333,186 @@ export default function MeetingDetailPage() {
     } finally {
       setIsEndingMeeting(false);
     }
-  };
-
-  // Función para guardar anotaciones de un punto
-  const handleSaveAnnotations = async (pointId: string) => {
+  };  // Función para guardar punto completo (anotaciones y duración real)
+  const handleSavePoint = async (pointId: string) => {
     const annotations = pointAnnotations[pointId] || '';
+    const pointTimer = pointTimers[pointId];
+    const duracionReal = pointTimer ? Math.ceil(pointTimer.elapsed / 60) : 0; // Convertir segundos a minutos
     
     try {
       setSavingAnnotations(prev => ({ ...prev, [pointId]: true }));
-      const success = await updatePointAnnotations(pointId, annotations);
       
-      if (success) {
-        toast.success("Anotaciones guardadas exitosamente");
+      // Crear el payload con anotaciones y duración real actualizada
+      const updateData: any = {
+        anotaciones: annotations,
+        duracion: duracionReal // Actualizar la duración con el tiempo real transcurrido
+      };
+        // Agregar datos de votación si es un punto de aprobación
+      const punto = puntosDetallados.find(p => p._id === pointId);
+      if (punto?.tipo === 'Aprobacion') {
+        const votosAFavorValue = votosAFavor[pointId] || 0;
+        const votosEnContraValue = votosEnContra[pointId] || 0;
+        const totalVotos = votosAFavorValue + votosEnContraValue;
+        const totalConvocados = meeting?.convocados?.length || 0;
+        
+        // Validar que el total de votos no supere los convocados
+        if (totalVotos > totalConvocados) {
+          toast.error(`El total de votos (${totalVotos}) no puede superar los ${totalConvocados} convocados`);
+          return;
+        }
+        
+        updateData.votosAFavor = votosAFavorValue;
+        updateData.votosEnContra = votosEnContraValue;
+      }// Usar el hook para actualizar el punto
+      const updatedPoint = await updatePunto(pointId, updateData);
+      
+      if (updatedPoint) {
+        toast.success("Punto guardado exitosamente");
+        
+        // Si el punto estaba activo, detener el cronómetro
+        if (activePointId === pointId) {
+          handleStopPoint(pointId);
+        }
+          // Actualizar el punto en el estado local
+        setPuntosDetallados(prev => 
+          prev.map(punto => 
+            punto._id === pointId 
+              ? { 
+                  ...punto, 
+                  anotaciones: annotations, 
+                  duracion: duracionReal, // Actualizar la duración con el tiempo real
+                  ...(punto.tipo === 'Aprobacion' && {
+                    votosAFavor: votosAFavor[pointId] || 0,
+                    votosEnContra: votosEnContra[pointId] || 0
+                  })
+                }
+              : punto
+          )
+        );
+      } else {
+        throw new Error('Error al guardar el punto');
       }
     } catch (error) {
-      console.error("Error al guardar anotaciones:", error);
-      toast.error("Error al guardar las anotaciones");
+      console.error("Error al guardar punto:", error);
+      toast.error("Error al guardar el punto");
     } finally {
       setSavingAnnotations(prev => ({ ...prev, [pointId]: false }));
     }
-  };
-
-  // Función para manejar cambios en las anotaciones
-  const handleAnnotationChange = (pointId: string, value: string) => {
+  };const handleAnnotationChange = (pointId: string, value: string) => {
     setPointAnnotations(prev => ({ ...prev, [pointId]: value }));
   };
+  // Función para manejar cambios en los votos
+  const handleVotosAFavorChange = (pointId: string, value: string) => {
+    const numValue = parseInt(value) || 0;
+    const totalConvocados = meeting?.convocados?.length || 0;
+    const votosEnContraActuales = votosEnContra[pointId] || 0;
+    
+    // Validar que el total no supere los convocados
+    const maxVotosAFavor = Math.max(0, totalConvocados - votosEnContraActuales);
+    const votosValidados = Math.min(Math.max(0, numValue), maxVotosAFavor);
+    
+    setVotosAFavor(prev => ({ ...prev, [pointId]: votosValidados }));
+    
+    // Mostrar advertencia si se intenta exceder el límite
+    if (numValue > maxVotosAFavor && totalConvocados > 0) {
+      toast.warning(`El total de votos no puede superar los ${totalConvocados} convocados`);
+    }
+  };
+
+  const handleVotosEnContraChange = (pointId: string, value: string) => {
+    const numValue = parseInt(value) || 0;
+    const totalConvocados = meeting?.convocados?.length || 0;
+    const votosAFavorActuales = votosAFavor[pointId] || 0;
+    
+    // Validar que el total no supere los convocados
+    const maxVotosEnContra = Math.max(0, totalConvocados - votosAFavorActuales);
+    const votosValidados = Math.min(Math.max(0, numValue), maxVotosEnContra);
+    
+    setVotosEnContra(prev => ({ ...prev, [pointId]: votosValidados }));
+    
+    // Mostrar advertencia si se intenta exceder el límite
+    if (numValue > maxVotosEnContra && totalConvocados > 0) {
+      toast.warning(`El total de votos no puede superar los ${totalConvocados} convocados`);
+    }
+  };
+
+  // Función para iniciar un punto específico
+  const handleStartPoint = (pointId: string) => {
+    const now = new Date();
+    
+    // Detener cualquier punto activo anterior
+    if (activePointId && timerIntervals[activePointId]) {
+      clearInterval(timerIntervals[activePointId]);
+    }
+    
+    // Establecer el nuevo punto activo
+    setActivePointId(pointId);
+    
+    // Inicializar el timer para este punto
+    setPointTimers(prev => ({
+      ...prev,
+      [pointId]: {
+        startTime: now,
+        elapsed: 0
+      }
+    }));
+    
+    // Crear intervalo para actualizar el cronómetro
+    const interval = setInterval(() => {
+      setPointTimers(prev => {
+        const pointTimer = prev[pointId];
+        if (pointTimer) {
+          const elapsed = Math.floor((new Date().getTime() - pointTimer.startTime.getTime()) / 1000);
+          return {
+            ...prev,
+            [pointId]: {
+              ...pointTimer,
+              elapsed
+            }
+          };
+        }
+        return prev;
+      });
+    }, 1000);
+    
+    // Guardar la referencia del intervalo
+    setTimerIntervals(prev => ({
+      ...prev,
+      [pointId]: interval
+    }));
+  };
+
+  // Función para detener un punto específico
+  const handleStopPoint = (pointId: string) => {
+    if (timerIntervals[pointId]) {
+      clearInterval(timerIntervals[pointId]);
+    }
+    
+    setActivePointId(null);
+    
+    // Limpiar el intervalo del estado
+    setTimerIntervals(prev => {
+      const newIntervals = { ...prev };
+      delete newIntervals[pointId];
+      return newIntervals;
+    });
+  };
+
+  // Función para formatear el tiempo del cronómetro
+  const formatTimer = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  // Limpiar intervalos cuando el componente se desmonte
+  useEffect(() => {
+    return () => {
+      Object.values(timerIntervals).forEach(interval => {
+        clearInterval(interval);
+      });
+    };
+  }, [timerIntervals]);
 
   // Determinar el estado de la reunión
   const isMeetingStarted = () => {
@@ -872,13 +1060,36 @@ export default function MeetingDetailPage() {
               </CardContent>
             </Card>
           )}          {/* Puntos de la reunión - Información detallada */}
-          {puntosDetallados && puntosDetallados.length > 0 && (
-            <Card>
+          {puntosDetallados && puntosDetallados.length > 0 && (            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Orden del Día ({puntosDetallados.length} puntos)
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Orden del Día ({puntosDetallados.length} puntos)
+                  </CardTitle>
+                  {/* Indicador de punto activo */}
+                  {activePointId && isMeetingStarted() && !isMeetingEnded() && (
+                    <div className="flex items-center gap-3 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                        <span className="text-sm font-medium text-red-900">Punto en curso</span>
+                      </div>
+                      {(() => {
+                        const activePointIndex = puntosDetallados.findIndex(p => p._id === activePointId);
+                        const activePoint = puntosDetallados[activePointIndex];
+                        return activePoint ? (
+                          <div className="flex items-center gap-2 text-sm text-red-700">
+                            <span>#{activePointIndex + 1}:</span>
+                            <span className="font-medium truncate max-w-32">{activePoint.titulo}</span>
+                            <span className="font-mono text-red-600">
+                              {pointTimers[activePointId] ? formatTimer(pointTimers[activePointId].elapsed) : '00:00'}
+                            </span>
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -906,13 +1117,11 @@ export default function MeetingDetailPage() {
                             <p className="text-sm text-muted-foreground leading-relaxed">
                               {punto.detalles}
                             </p>
-                          )}
-                          
-                          {/* Información adicional */}
+                          )}                          {/* Información adicional */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div className="flex items-center gap-2">
                               <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">Duración:</span>
+                              <span className="font-medium">Duración estimada:</span>
                               <span className="text-muted-foreground">{formatDuracion(punto.duracion)}</span>
                             </div>
                             <div className="flex items-center gap-2">
@@ -920,7 +1129,116 @@ export default function MeetingDetailPage() {
                               <span className="font-medium">Expositor:</span>
                               <span className="text-muted-foreground">{punto.expositor}</span>
                             </div>
-                          </div>
+                          </div>                            {/* Mostrar estado completado si el punto tiene anotaciones guardadas */}
+                          {punto.anotaciones && (
+                            <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full" />
+                                  <span className="font-medium text-green-800">Punto completado</span>
+                                </div>
+                                <div className="flex items-center gap-4 text-green-700">
+                                  <span>Duración final: <strong>{formatDuracion(punto.duracion)}</strong></span>
+                                </div>
+                              </div>
+                                {/* Mostrar votación registrada si es un punto de aprobación completado */}
+                              {punto.tipo === 'Aprobacion' && (punto.votosAFavor !== undefined || punto.votosEnContra !== undefined) && (
+                                <div className="mt-2 pt-2 border-t border-green-200">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <Vote className="h-3 w-3 text-green-600" />
+                                      <span className="font-medium text-green-800">Votación registrada:</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex items-center gap-1 text-xs">
+                                        <ThumbsUp className="h-3 w-3 text-green-600" />
+                                        <span>{punto.votosAFavor || 0}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1 text-xs">
+                                        <ThumbsDown className="h-3 w-3 text-red-600" />
+                                        <span>{punto.votosEnContra || 0}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}{/* Cronómetro y botón de iniciar punto - Solo visible si la reunión ha iniciado y el punto no ha sido completado */}
+                          {isMeetingStarted() && !isMeetingEnded() && !punto.anotaciones && (
+                            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <Timer className="h-4 w-4 text-blue-600" />
+                                    <span className="text-sm font-medium text-blue-900">Cronómetro:</span>
+                                    <span className={`text-lg font-mono font-bold ${
+                                      activePointId === punto._id ? 'text-red-600' : 'text-gray-600'
+                                    }`}>
+                                      {pointTimers[punto._id] ? formatTimer(pointTimers[punto._id].elapsed) : '00:00'}
+                                    </span>
+                                  </div>
+                                  {pointTimers[punto._id] && activePointId === punto._id && (
+                                    <Badge variant="destructive" className="animate-pulse">
+                                      En curso
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex gap-2">
+                                  {activePointId !== punto._id ? (
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      onClick={() => handleStartPoint(punto._id)}
+                                      disabled={activePointId !== null}
+                                    >
+                                      <Play className="h-4 w-4 mr-2" />
+                                      Iniciar Punto
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() => handleStopPoint(punto._id)}
+                                    >
+                                      <Pause className="h-4 w-4 mr-2" />
+                                      Detener
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              {/* Indicador de tiempo estimado vs tiempo real */}
+                              {pointTimers[punto._id] && (
+                                <div className="mt-2 text-xs text-muted-foreground">
+                                  <div className="flex justify-between">
+                                    <span>Tiempo estimado: {formatDuracion(punto.duracion)}</span>
+                                    <span className={`font-medium ${
+                                      pointTimers[punto._id].elapsed > punto.duracion * 60 
+                                        ? 'text-red-600' 
+                                        : 'text-green-600'
+                                    }`}>
+                                      {pointTimers[punto._id].elapsed > punto.duracion * 60 
+                                        ? `+${Math.floor((pointTimers[punto._id].elapsed - punto.duracion * 60) / 60)}m excedido`
+                                        : `${Math.floor((punto.duracion * 60 - pointTimers[punto._id].elapsed) / 60)}m restantes`
+                                      }
+                                    </span>
+                                  </div>
+                                  {/* Barra de progreso */}
+                                  <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
+                                    <div 
+                                      className={`h-2 rounded-full transition-all duration-1000 ${
+                                        pointTimers[punto._id].elapsed > punto.duracion * 60 
+                                          ? 'bg-red-500' 
+                                          : 'bg-green-500'
+                                      }`}
+                                      style={{ 
+                                        width: `${Math.min(100, (pointTimers[punto._id].elapsed / (punto.duracion * 60)) * 100)}%` 
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                             {/* Archivos del punto */}
                           {punto.archivos && punto.archivos.length > 0 && (
                             <div className="mt-3">
@@ -952,17 +1270,110 @@ export default function MeetingDetailPage() {
                           {isMeetingStarted() && (
                             <div className="mt-4 p-3 bg-muted/30 rounded-lg">
                               <p className="text-sm font-medium mb-2">Anotaciones del punto:</p>
-                              <div className="space-y-2">
+                              <div className="space-y-3">
                                 <Textarea
                                   placeholder="Escriba sus anotaciones aquí..."
                                   value={pointAnnotations[punto._id] || ''}
                                   onChange={(e) => handleAnnotationChange(punto._id, e.target.value)}
                                   className="min-h-[80px] resize-none"
-                                />
+                                />                                {/* Sección de votación - Solo para puntos de aprobación */}
+                                {punto.tipo === 'Aprobacion' && (
+                                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <div className="flex items-center gap-2">
+                                        <Vote className="h-4 w-4 text-amber-600" />
+                                        <span className="text-sm font-medium text-amber-900">Registro de votación:</span>
+                                      </div>
+                                      <div className="text-xs text-amber-700">
+                                        Total convocados: {meeting?.convocados?.length || 0}
+                                      </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                        <label className="text-xs font-medium text-green-700 flex items-center gap-1">
+                                          <ThumbsUp className="h-3 w-3" />
+                                          Votos a favor
+                                        </label>
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          max={Math.max(0, (meeting?.convocados?.length || 0) - (votosEnContra[punto._id] || 0))}
+                                          placeholder="0"
+                                          value={votosAFavor[punto._id] || ''}
+                                          onChange={(e) => handleVotosAFavorChange(punto._id, e.target.value)}
+                                          className="text-center border-green-300 focus:border-green-500"
+                                        />
+                                        <div className="text-xs text-green-600 text-center">
+                                          Máx: {Math.max(0, (meeting?.convocados?.length || 0) - (votosEnContra[punto._id] || 0))}
+                                        </div>
+                                      </div>
+                                      <div className="space-y-2">
+                                        <label className="text-xs font-medium text-red-700 flex items-center gap-1">
+                                          <ThumbsDown className="h-3 w-3" />
+                                          Votos en contra
+                                        </label>
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          max={Math.max(0, (meeting?.convocados?.length || 0) - (votosAFavor[punto._id] || 0))}
+                                          placeholder="0"
+                                          value={votosEnContra[punto._id] || ''}
+                                          onChange={(e) => handleVotosEnContraChange(punto._id, e.target.value)}
+                                          className="text-center border-red-300 focus:border-red-500"
+                                        />
+                                        <div className="text-xs text-red-600 text-center">
+                                          Máx: {Math.max(0, (meeting?.convocados?.length || 0) - (votosAFavor[punto._id] || 0))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Indicador de votos utilizados */}
+                                    {((votosAFavor[punto._id] || 0) + (votosEnContra[punto._id] || 0)) > 0 && (
+                                      <div className="mt-3 pt-3 border-t border-amber-200">
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-amber-700">Votos registrados:</span>
+                                          <span className="font-medium">
+                                            {(votosAFavor[punto._id] || 0) + (votosEnContra[punto._id] || 0)} / {meeting?.convocados?.length || 0}
+                                          </span>
+                                        </div>
+                                        
+                                        {/* Barra de progreso de votos */}
+                                        <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                          <div 
+                                            className="bg-amber-500 h-2 rounded-full transition-all duration-300"
+                                            style={{ 
+                                              width: `${Math.min(100, ((votosAFavor[punto._id] || 0) + (votosEnContra[punto._id] || 0)) / (meeting?.convocados?.length || 1) * 100)}%` 
+                                            }}
+                                          />
+                                        </div>
+                                        
+                                        {/* Votos pendientes */}
+                                        {((meeting?.convocados?.length || 0) - (votosAFavor[punto._id] || 0) - (votosEnContra[punto._id] || 0)) > 0 && (
+                                          <div className="mt-1 text-xs text-amber-600 text-center">
+                                            {(meeting?.convocados?.length || 0) - (votosAFavor[punto._id] || 0) - (votosEnContra[punto._id] || 0)} votos sin registrar
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {/* Información de duración para el guardado */}
+                                {pointTimers[punto._id] && (
+                                  <div className="text-xs text-muted-foreground bg-blue-50 p-2 rounded border">
+                                    <div className="flex justify-between items-center">
+                                      <span>Duración estimada: {formatDuracion(punto.duracion)}</span>
+                                      <span className="font-medium">
+                                        Duración real: {formatDuracion(Math.ceil(pointTimers[punto._id].elapsed / 60))}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                                
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleSaveAnnotations(punto._id)}
+                                  onClick={() => handleSavePoint(punto._id)}
                                   disabled={savingAnnotations[punto._id]}
                                   className="w-full"
                                 >
@@ -971,7 +1382,7 @@ export default function MeetingDetailPage() {
                                   ) : (
                                     <Save className="h-4 w-4 mr-2" />
                                   )}
-                                  Guardar Anotaciones
+                                  Guardar Punto
                                 </Button>
                               </div>
                             </div>
