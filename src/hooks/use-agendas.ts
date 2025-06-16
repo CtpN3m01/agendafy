@@ -296,11 +296,11 @@ export function useAgendas(organizacionId?: string): UseAgendasReturn {
       return [];
     }
   };
-
   useEffect(() => {
     if (organizacionId) {
       fetchAgendas();
     } else {
+      setAgendas([]);
       setIsLoading(false);
     }
   }, [organizacionId, fetchAgendas]);
