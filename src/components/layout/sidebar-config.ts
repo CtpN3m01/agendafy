@@ -22,7 +22,7 @@ export const defaultSidebarConfig: SidebarConfig = {
         {
           title: "Agendas",
           icon: FileText,
-          href: "/agenda",
+          href: "/agendas",
         },
         {
           title: "Organización",
