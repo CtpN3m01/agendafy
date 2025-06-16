@@ -34,21 +34,21 @@ export const defaultSidebarConfig: SidebarConfig = {
         },
       ],
     },
-    {
-      title: "Sistema",
-      items: [
-        {
-          title: "Configuración",
-          icon: Settings,
-          href: "/configuracion",
-        },
-        {
-          title: "Notificaciones",
-          icon: Bell,
-          href: "/notificaciones",
-          badge: "3",
-        },
-      ],
-    },
+    // {
+    //   title: "Sistema",
+    //   items: [
+    //     {
+    //       title: "Configuración",
+    //       icon: Settings,
+    //       href: "/configuracion",
+    //     },
+    //     {
+    //       title: "Notificaciones",
+    //       icon: Bell,
+    //       href: "/notificaciones",
+    //       badge: "3",
+    //     },
+    //   ],
+    // },
   ],
 };
