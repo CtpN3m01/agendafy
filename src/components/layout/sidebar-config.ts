@@ -19,6 +19,11 @@ export const defaultSidebarConfig: SidebarConfig = {
           href: "/reuniones",
         },
         {
+          title: "Agenda",
+          icon: FileText,
+          href: "/agenda",
+        },
+        {
           title: "Organización",
           icon: Building,
           href: "/organizacion",

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Settings, Mail, Phone, MapPin, Loader2 } from "lucide-react";
+import {  Mail, Phone, MapPin, Loader2, Upload, X, Image as ImageIcon, Pencil } from "lucide-react";
 import { OrganizationLogo } from "./organization-logo";
 import { BoardMembersTable } from "./board-members-table";
 import { toast } from "sonner";
@@ -32,16 +33,43 @@ interface OrganizationInfoProps {
 export function OrganizationInfo({ organization, onUpdate }: OrganizationInfoProps) {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);const [formData, setFormData] = useState({
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);const [formData, setFormData] = useState({
     nombre: organization.nombre,
     correo: organization.correo,
     telefono: organization.telefono,
     direccion: organization.direccion
   });
-
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };  const handleSave = async () => {
+  };
+
+  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedLogo(file);
+      // Crear preview URL
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    }
+  };
+  const clearLogo = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setSelectedLogo(null);
+    setPreviewUrl(null);
+  };
+
+  // Cleanup del preview URL
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);const handleSave = async () => {
     setIsLoading(true);
     
     // Validar que tenemos el usuario autenticado
@@ -54,20 +82,38 @@ export function OrganizationInfo({ organization, onUpdate }: OrganizationInfoPro
     // Debug: verificar que tenemos los datos necesarios
     console.log('Organization ID:', organization.id);
     console.log('User ID:', user.id);
-    console.log('Form data:', formData);
-      try {
-      const response = await fetch(`/api/mongo/organizacion/actualizarDatos?id=${organization.id}&usuarioId=${user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          nombre: formData.nombre,
-          correo: formData.correo,
-          telefono: formData.telefono,
-          direccion: formData.direccion
-        })
-      });
+    console.log('Form data:', formData);    try {
+      let response;
+      
+      // Si hay un logo seleccionado, usar FormData y la API original
+      if (selectedLogo) {
+        const formDataWithLogo = new FormData();
+        formDataWithLogo.append('nombre', formData.nombre);
+        formDataWithLogo.append('correo', formData.correo);
+        formDataWithLogo.append('telefono', formData.telefono);
+        formDataWithLogo.append('direccion', formData.direccion);
+        formDataWithLogo.append('usuarioId', user.id);
+        formDataWithLogo.append('logo', selectedLogo);
+
+        response = await fetch(`/api/mongo/organizacion/actualizarOrganizacion?id=${organization.id}&usuarioId=${user.id}`, {
+          method: 'PUT',
+          body: formDataWithLogo
+        });
+      } else {
+        // Si no hay logo, usar la API sin multer
+        response = await fetch(`/api/mongo/organizacion/actualizarDatos?id=${organization.id}&usuarioId=${user.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            nombre: formData.nombre,
+            correo: formData.correo,
+            telefono: formData.telefono,
+            direccion: formData.direccion
+          })
+        });
+      }
 
       const result = await response.json();      if (result.success) {
         toast.success("Organización actualizada exitosamente");
@@ -88,7 +134,6 @@ export function OrganizationInfo({ organization, onUpdate }: OrganizationInfoPro
       setIsLoading(false);
     }
   };
-
   const handleCancel = () => {
     setFormData({
       nombre: organization.nombre,
@@ -96,6 +141,7 @@ export function OrganizationInfo({ organization, onUpdate }: OrganizationInfoPro
       telefono: organization.telefono,
       direccion: organization.direccion
     });
+    clearLogo();
     setIsEditing(false);
   };
 
@@ -114,14 +160,13 @@ export function OrganizationInfo({ organization, onUpdate }: OrganizationInfoPro
           </div>
         </div>
         
-        <Dialog open={isEditing} onOpenChange={setIsEditing}>
-          <DialogTrigger asChild>
+        <Dialog open={isEditing} onOpenChange={setIsEditing}>          <DialogTrigger asChild>
             <Button>
-              <Settings className="h-4 w-4 mr-2" />
+              <Pencil className="h-4 w-4 mr-2" />
               Editar Información
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Editar Organización</DialogTitle>
               <DialogDescription>
@@ -163,9 +208,72 @@ export function OrganizationInfo({ organization, onUpdate }: OrganizationInfoPro
                   id="direccion"
                   value={formData.direccion}
                   onChange={(e) => handleInputChange('direccion', e.target.value)}
-                  placeholder="Dirección completa"
-                  rows={3}
+                  placeholder="Dirección completa"                  rows={3}
                 />
+              </div>
+              
+              {/* Sección de Logo */}
+              <div className="space-y-2">
+                <Label htmlFor="logo">Logo de la organización</Label>
+                <div className="flex items-center gap-4">
+                  {/* Preview del logo actual o nuevo */}                  <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50">
+                    {previewUrl ? (
+                      <Image
+                        src={previewUrl}
+                        alt="Preview del nuevo logo"
+                        width={64}
+                        height={64}
+                        className="object-cover rounded-lg"
+                      />
+                    ) : organization.logo ? (
+                      <Image
+                        src={organization.logo}
+                        alt={`Logo de ${organization.nombre}`}
+                        width={64}
+                        height={64}
+                        className="object-cover rounded-lg"
+                      />
+                    ) : (
+                      <ImageIcon className="h-6 w-6 text-gray-400" />
+                    )}
+                  </div>
+                  
+                  {/* Controles del logo */}
+                  <div className="flex-1 space-y-2">
+                    <div className="flex gap-2">
+                      <Label htmlFor="logo-upload" className="cursor-pointer">
+                        <div className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm">
+                          <Upload className="h-4 w-4" />
+                          Subir logo
+                        </div>
+                        <input
+                          id="logo-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoChange}
+                          className="hidden"
+                        />
+                      </Label>
+                      
+                      {(selectedLogo || previewUrl) && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={clearLogo}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground">
+                      {selectedLogo ? `Nuevo archivo: ${selectedLogo.name}` : 
+                       organization.logo ? 'Logo actual' : 
+                       'Formatos: JPG, PNG, GIF. Máximo 5MB'}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
             <DialogFooter>
