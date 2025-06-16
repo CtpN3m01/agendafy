@@ -12,7 +12,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const authService = new AuthService();
     
     const body = req.body;
-    console.log('Datos recibidos:', body);
     
     // Manejar ambos formatos (frontend y Postman)
     const registerData: CrearUsuarioDTO = {
@@ -23,7 +22,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       contrasena: body.contrasena || body.password
     };
 
-    console.log('Datos procesados:', registerData);
+    // Log sin datos sensibles
+    console.log('Procesando registro para usuario:', registerData.nombreUsuario, 'email:', registerData.correo);
 
     // Validaciones básicas
     if (!registerData.nombreUsuario || !registerData.nombre || !registerData.correo || !registerData.contrasena) {

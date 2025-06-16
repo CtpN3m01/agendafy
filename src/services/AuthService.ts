@@ -50,8 +50,14 @@ export class AuthService {
         nombreUsuario: nuevoUsuario.nombreUsuario
       });
 
-      // Enviar correo de bienvenida
-      await this.emailService.enviarCorreoBienvenida(nuevoUsuario.correo, nuevoUsuario.nombre);
+      // Intentar enviar correo de bienvenida (no bloquear el registro si falla)
+      try {
+        await this.emailService.enviarCorreoBienvenida(nuevoUsuario.correo, nuevoUsuario.nombre);
+        console.log('Correo de bienvenida enviado exitosamente');
+      } catch (emailError) {
+        console.warn('No se pudo enviar el correo de bienvenida:', emailError instanceof Error ? emailError.message : 'Error desconocido');
+        // No fallar el registro por un error de email
+      }
 
       return {
         success: true,
@@ -137,15 +143,21 @@ export class AuthService {
           message: 'No se encontró una cuenta con ese correo'
         };
       }      const resetToken = AuthUtil.generateResetToken();
-      const expires = AuthUtil.getResetTokenExpiration();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const expires = AuthUtil.getResetTokenExpiration();      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await this.usuarioDAO.actualizarToken((usuario as any)._id.toString(), resetToken, expires);
-      await this.emailService.enviarCorreoRecuperacion(correo, resetToken);
+      
+      // Intentar enviar correo de recuperación
+      try {
+        await this.emailService.enviarCorreoRecuperacion(correo, resetToken);
+        console.log('Correo de recuperación enviado exitosamente');
+      } catch (emailError) {
+        console.warn('No se pudo enviar el correo de recuperación:', emailError instanceof Error ? emailError.message : 'Error desconocido');
+        // Aún consideramos exitoso el proceso aunque no se envíe el email
+      }
 
       return {
         success: true,
-        message: 'Se ha enviado un correo con las instrucciones de recuperación'
+        message: 'Se ha generado el token de recuperación. Verifica la configuración de email para recibir instrucciones.'
       };
     } catch (error) {
       console.error('Error en recuperación:', error);
