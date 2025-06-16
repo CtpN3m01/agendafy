@@ -16,7 +16,7 @@ export class AuthUtil {
   static verifyToken(token: string): JWTPayload | null {
     try {
       return jwt.verify(token, JWT_CONFIG.SECRET) as JWTPayload;
-    } catch (error) {
+    } catch {
       return null;
     }
   }

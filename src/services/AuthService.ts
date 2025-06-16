@@ -94,16 +94,17 @@ export class AuthService {
           errors: { general: ['Usuario o contraseña incorrectos'] }
         };
       }
-
       // Generar token
       const token = AuthUtil.generateToken({
-        userId: usuario._id.toString(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        userId: (usuario as any)._id.toString(),
         email: usuario.correo,
         nombreUsuario: usuario.nombre_usuario
       });
 
       const userResponse: UsuarioResponseDTO = {
-        id: usuario._id.toString(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        id: (usuario as any)._id.toString(),
         nombreUsuario: usuario.nombre_usuario,
         nombre: usuario.nombre,
         apellidos: usuario.apellidos,
@@ -135,12 +136,11 @@ export class AuthService {
           success: false,
           message: 'No se encontró una cuenta con ese correo'
         };
-      }
-
-      const resetToken = AuthUtil.generateResetToken();
+      }      const resetToken = AuthUtil.generateResetToken();
       const expires = AuthUtil.getResetTokenExpiration();
 
-      await this.usuarioDAO.actualizarToken(usuario._id.toString(), resetToken, expires);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await this.usuarioDAO.actualizarToken((usuario as any)._id.toString(), resetToken, expires);
       await this.emailService.enviarCorreoRecuperacion(correo, resetToken);
 
       return {
@@ -165,9 +165,9 @@ export class AuthService {
           message: 'Token inválido o expirado'
         };
       }
-
       const hashedPassword = await HashUtil.hash(nuevaContrasena);
-      await this.usuarioDAO.actualizarContrasena(usuario._id.toString(), hashedPassword);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await this.usuarioDAO.actualizarContrasena((usuario as any)._id.toString(), hashedPassword);
 
       return {
         success: true,

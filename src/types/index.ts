@@ -213,6 +213,7 @@ export interface MeetingSettings {
 }
 
 // Tipos para formularios y validación
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface FormField<T = any> {
   value: T;
   error?: string;
@@ -228,6 +229,7 @@ export interface FormState<T> {
 }
 
 // Tipos para API responses
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;

@@ -1,7 +1,7 @@
 // src/hooks/use-auth.ts
 "use client";
 
-import { useState, useEffect, useContext, createContext } from 'react';
+import { useState, useEffect, useContext, createContext, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMounted } from './use-mounted';
@@ -31,18 +31,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const isMounted = useMounted();
-  const router = useRouter();
-
+  const isMounted = useMounted();  const router = useRouter();
   const isAuthenticated = !!token && !!user;
 
-  // Verificar autenticación al cargar la aplicación
-  useEffect(() => {
-    if (isMounted) {
-      checkAuth();
-    }
-  }, [isMounted]);
-  const checkAuth = (): boolean => {
+  const logout = useCallback(() => {
+    if (!isMounted) return;
+    
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    
+    // Eliminar cookie
+    document.cookie = 'authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+    
+    setToken(null);
+    setUser(null);
+    router.push('/auth/login');
+  }, [isMounted, router]);
+
+  const checkAuth = useCallback((): boolean => {
     if (!isMounted) return false;
     
     try {
@@ -68,13 +74,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
         return false;
       }
-    } catch (error) {
-      console.error('Error checking auth:', error);
+    } catch (error) {      console.error('Error checking auth:', error);
       logout();
       setIsLoading(false);
       return false;
     }
-  };
+  }, [isMounted, logout]);
+
+  // Verificar autenticación al cargar la aplicación
+  useEffect(() => {
+    if (isMounted) {
+      checkAuth();
+    }
+  }, [isMounted, checkAuth]);
+
   const login = (newToken: string, newUser: User) => {
     if (!isMounted) return;
     
@@ -83,21 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // También establecer como cookie para el middleware
     document.cookie = `authToken=${newToken}; path=/; max-age=${7 * 24 * 60 * 60}`; // 7 días
-    
-    setToken(newToken);
+      setToken(newToken);
     setUser(newUser);
-  };  const logout = () => {
-    if (!isMounted) return;
-    
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    
-    // Eliminar cookie
-    document.cookie = 'authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-    
-    setToken(null);
-    setUser(null);
-    router.push('/auth/login');
   };
 
   const updateUser = (userData: Partial<User>) => {

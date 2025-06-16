@@ -11,7 +11,7 @@ interface ClientProvidersProps {
 }
 
 export function ClientProviders({ children }: ClientProvidersProps) {
-  const isMounted = useMounted();
+  useMounted();
 
   return (
     <AuthProvider>

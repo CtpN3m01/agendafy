@@ -5,7 +5,6 @@ import '@/models/Persona'; // Asegurar que el modelo Persona esté registrado
 import '@/models/Reunion'; // Asegurar que el modelo Reunion esté registrado
 import '@/models/Punto'; // Asegurar que el modelo Punto esté registrado
 import { CrearOrganizacionDTO, OrganizacionResponseDTO, ActualizarOrganizacionDTO } from '@/types/OrganizacionDTO';
-import { connectToDatabase } from '@/lib/mongodb';
 
 /* 
 DAO es responsable de acceder a los datos de una base de datos. 
@@ -138,7 +137,10 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
       organizacionId,
       { $addToSet: { reuniones: reunionId } }
     ).exec();
-  }  private mapearAResponse(organizacion: any): OrganizacionResponseDTO {
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private mapearAResponse(organizacion: any): OrganizacionResponseDTO {
     // Convertir logo a base64 solo si no es muy grande (máximo 500KB en base64)
     let logoBase64: string | undefined;
     if (organizacion.logo) {
@@ -165,6 +167,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
         nombre: organizacion.usuario?.nombre || '',
         correo: organizacion.usuario?.correo || ''
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       miembros: organizacion.miembros?.map((miembro: any) => ({
         id: miembro._id?.toString() || miembro,
         nombre: miembro.nombre || '',
@@ -172,6 +175,7 @@ export class OrganizacionDAOImpl implements IOrganizacionDAO {
         correo: miembro.correo || '',
         rol: miembro.rol || ''
       })) || [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       reuniones: organizacion.reuniones?.map((reunion: any) => ({
         id: reunion._id?.toString() || reunion,
         titulo: reunion.titulo || '',

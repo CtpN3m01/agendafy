@@ -1,7 +1,6 @@
 import { OrganizacionDAOImpl, IOrganizacionDAO } from '@/dao/OrganizacionDAO';
 import { CrearOrganizacionDTO, OrganizacionResponseDTO, ActualizarOrganizacionDTO } from '@/types/OrganizacionDTO';
 import { UsuarioModel } from '@/models/Usuario';
-import { connectToDatabase } from '@/lib/mongodb';
 import { PersonaModel } from '@/models/Persona';
 
 export class OrganizacionService {
@@ -267,7 +266,6 @@ export class OrganizacionService {
       throw error;
     }
   }
-
   // Agregar miembro a la junta directiva
   async agregarMiembroJunta(organizacionId: string, datos: {
     nombre: string;
@@ -277,6 +275,7 @@ export class OrganizacionService {
   }): Promise<{
     success: boolean;
     message: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     miembro?: any;
     errors?: Record<string, string[]>;
   }> {
@@ -376,10 +375,10 @@ export class OrganizacionService {
     nombre?: string;
     apellidos?: string;
     correo?: string;
-    rol?: string;
-  }): Promise<{
+    rol?: string;  }): Promise<{
     success: boolean;
     message: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     miembro?: any;
     errors?: Record<string, string[]>;
   }> {
@@ -417,9 +416,8 @@ export class OrganizacionService {
             errors: { correo: ['Este correo ya está registrado'] }
           };
         }
-      }
-
-      // Actualizar datos del miembro
+      }      // Actualizar datos del miembro
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const datosActualizacion: any = {};
       if (datos.nombre) datosActualizacion.nombre = datos.nombre;
       if (datos.apellidos) datosActualizacion.apellidos = datos.apellidos;
@@ -467,6 +465,7 @@ export class OrganizacionService {
   async eliminarMiembroJunta(organizacionId: string, miembroId: string): Promise<{
     success: boolean;
     message: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     miembroEliminado?: any;
     errors?: Record<string, string[]>;
   }> {

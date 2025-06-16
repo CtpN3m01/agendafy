@@ -8,14 +8,21 @@ Encapsula toda la lógica para interactuar con la base de datos,
 como consultas, inserciones, actualizaciones o eliminaciones.
 */
 
-export class PuntoDAO {  async create(puntoData: Partial<IPunto>): Promise<IPunto> {
+export class PuntoDAO {
+  async create(puntoData: Partial<IPunto>): Promise<IPunto> {
     // Convierte agenda a ObjectId si viene como string
     if (puntoData.agenda && typeof puntoData.agenda === 'string') {
       puntoData.agenda = mongoose.Types.ObjectId.createFromHexString(puntoData.agenda);
     }
     
+    // Validate required fields before creating punto
+    if (!puntoData.titulo || !puntoData.tipo) {
+      throw new Error('Título y tipo son campos requeridos');
+    }
+    
     // Usar PuntoFactory para crear el punto según su tipo
-    return PuntoFactory.crearPunto(puntoData as any);
+    // @ts-expect-error - PuntoFactory expects specific type structure
+    return PuntoFactory.crearPunto(puntoData);
   }
 
   async findAll(): Promise<IPunto[]> {

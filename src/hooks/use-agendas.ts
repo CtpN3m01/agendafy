@@ -17,8 +17,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { isValidObjectId } from '@/lib/validation';
-import { CrearAgendaDTO, ActualizarAgendaDTO } from '@/types/AgendaDTO';
-import { CrearPuntoDTO, ActualizarPuntoDTO } from '@/types/PuntoDTO';
+import { CrearAgendaDTO } from '@/types/AgendaDTO';
+import { CrearPuntoDTO } from '@/types/PuntoDTO';
 import mongoose from 'mongoose';
 
 // Interfaz para los datos de respuesta de la API (equivalente a AgendaData)
@@ -37,10 +37,6 @@ type CreateAgendaData = Omit<CrearAgendaDTO, 'organizacion'> & {
   organizacion: string;
 };
 
-// Tipo para actualizar agenda
-type UpdateAgendaData = Omit<ActualizarAgendaDTO, 'organizacion'> & {
-  organizacion?: string;
-};
 
 // Interfaz para puntos (simplificada basada en DTO)
 interface PuntoData extends Omit<CrearPuntoDTO, 'agenda'> {
@@ -48,13 +44,7 @@ interface PuntoData extends Omit<CrearPuntoDTO, 'agenda'> {
   agenda?: string;
 }
 
-// Tipos de respuesta reutilizables
-type ApiResponse<T> = {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-};
+
 
 interface UseAgendasReturn {
   agendas: AgendaResponse[];
@@ -200,7 +190,7 @@ export function useAgendas(organizacionId?: string): UseAgendasReturn {
       }      // Actualizar la agenda con los IDs de los puntos creados
       if (puntosCreados.length > 0) {
         const agendaActualizada = await updateAgenda(nuevaAgenda._id, {
-          puntos: puntosCreados as any // Casting temporal para compatibilidad
+          puntos: puntosCreados as unknown as mongoose.Types.ObjectId[] // Casting temporal para compatibilidad
         });
         return agendaActualizada || nuevaAgenda;
       }

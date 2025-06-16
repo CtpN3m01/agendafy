@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building, Users, Calendar, Settings, Mail, Phone, MapPin } from "lucide-react";
+import { Users, Calendar, Settings, Mail, Phone, MapPin } from "lucide-react";
 import { OrganizationLogo } from "./organization-logo";
 import { BoardMembersTable } from "./board-members-table";
 

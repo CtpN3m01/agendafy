@@ -18,8 +18,8 @@ async function getUserFromToken(req: NextApiRequest) {
     console.log('getUserFromToken - No token found');
     return null;
   }
-
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const decoded = jwt.verify(token, JWT_CONFIG.SECRET) as any;
     console.log('getUserFromToken - Decoded token:', decoded);
     
@@ -42,6 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(401).json({ error: 'Usuario no autenticado' });
       }      // Mapear datos del usuario a formato UserProfile
       const userProfile = {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         id: (usuario as any)._id.toString(),
         name: `${usuario.nombre} ${usuario.apellidos}`,
         email: usuario.correo,
@@ -71,12 +72,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(401).json({ error: 'Usuario no autenticado' });
       }
 
-      console.log('Usuario encontrado:', { id: (usuario as any)._id, nombre: usuario.nombre });
+      console.log('Usuario encontrado:', { id: 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (usuario as any)._id, nombre: usuario.nombre });
 
-      const { name, email, phone, position, department, bio } = req.body;
-
-      // Preparar datos para actualizar
-      let updateData: any = {};
+      const { name, email, phone, position, department, bio } = req.body;      // Preparar datos para actualizar
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateData: any = {};
       
       // Si se actualiza el nombre, separar en nombre y apellidos
       if (name && name !== `${usuario.nombre} ${usuario.apellidos}`) {
@@ -95,16 +97,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (department !== undefined) updateData.departamento = department;
       if (bio !== undefined) updateData.biografia = bio;
 
-      console.log('Datos a actualizar:', updateData);
-
-      // Actualizar usando el nuevo método del DAO
-      const usuarioActualizado = await usuarioDAO.actualizarPerfil((usuario as any)._id.toString(), updateData);
+      console.log('Datos a actualizar:', updateData);      // Actualizar usando el nuevo método del DAO
+      const usuarioActualizado = await usuarioDAO.actualizarPerfil(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (usuario as any)._id.toString(), updateData);
 
       console.log('Usuario actualizado:', usuarioActualizado ? 'exitoso' : 'falló');
 
       if (!usuarioActualizado) {
         return res.status(500).json({ error: 'Error al actualizar el usuario' });
-      }const userProfileActualizado = {
+      }      const userProfileActualizado = {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         id: (usuarioActualizado as any)._id.toString(),
         name: `${usuarioActualizado.nombre} ${usuarioActualizado.apellidos}`,
         email: usuarioActualizado.correo,

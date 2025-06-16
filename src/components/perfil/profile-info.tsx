@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { UserCircle, Mail, Phone, MapPin, Edit, Save, X } from "lucide-react";
+import { Mail, Phone, Edit, Save, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ interface ProfileInfoProps {
 }
 
 // Función utilitaria para formatear fechas
-const formatDate = (date: Date | string | any): string => {
+const formatDate = (date: Date | string | unknown): string => {
   try {
     let dateObj: Date;
     
@@ -27,11 +27,12 @@ const formatDate = (date: Date | string | any): string => {
       dateObj = date;
     } else if (typeof date === 'string') {
       dateObj = new Date(date);
-    } else if (typeof date === 'object' && date.$date) {
+    } else if (typeof date === 'object' && date && '$date' in date) {
       // Handle MongoDB date format
-      dateObj = new Date(date.$date);
+      dateObj = new Date((date as { $date: string }).$date);
     } else {
-      dateObj = new Date(date);
+      // Try to convert to string first
+      dateObj = new Date(String(date));
     }
     
     // Check if the date is valid

@@ -86,7 +86,7 @@ export function OrganizationLogo({ logoUrl, organizationName, size = "md" }: Org
 
     // Para URLs normales
     setImageSrc(logoUrl);
-  }, [logoUrl, token]);
+  }, [logoUrl, token, imageSrc]);
 
   return (
     <Avatar className={sizeClasses[size]}>

@@ -123,10 +123,9 @@ export default function MeetingDetailPage() {
           if (puntosResponse.ok) {
             const puntosData = await puntosResponse.json();
             setPuntosDetallados(puntosData);
-            
-            // Cargar las anotaciones existentes en el estado local
+              // Cargar las anotaciones existentes en el estado local
             const anotacionesExistentes: Record<string, string> = {};
-            puntosData.forEach((punto: any) => {
+            puntosData.forEach((punto: { _id: string; anotaciones?: string }) => {
               if (punto.anotaciones) {
                 anotacionesExistentes[punto._id] = punto.anotaciones;
               }
@@ -374,8 +373,7 @@ export default function MeetingDetailPage() {
             tipo: punto.tipo,
             expositor: punto.expositor,
             detalles: punto.detalles
-          }))
-        : (meeting.puntos || []).map((punto, index) => ({
+          }))        : (meeting.puntos || []).map((punto) => ({
             duracion: 30, // Duración por defecto
             titulo: punto,
             tipo: "Informativo", // Tipo por defecto
@@ -461,9 +459,8 @@ export default function MeetingDetailPage() {
     } finally {
       setIsSendingEmail(false);
     }
-  };
-  // Función para calcular el horario de entrada según los puntos de la agenda
-  const calcularHorarioEntrada = (convocado: any, puntos: any[], horaInicio: string) => {
+  };  // Función para calcular el horario de entrada según los puntos de la agenda
+  const calcularHorarioEntrada = (convocado: { nombre: string; correo: string; esMiembro: boolean }, puntos: { duracion: number; expositor?: string; titulo: string }[], horaInicio: string) => {
     const fechaInicio = new Date(horaInicio);
     let tiempoAcumulado = 0;
     

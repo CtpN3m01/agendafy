@@ -1,7 +1,7 @@
 // src/hooks/use-organization-members.ts
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { isValidObjectId } from '@/lib/validation';
 
 export interface OrganizationMember {
@@ -27,7 +27,7 @@ export function useOrganizationMembers(organizacionId?: string): UseOrganization
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     if (!organizacionId) {
       setMembers([]);
       setIsLoading(false);
@@ -53,7 +53,7 @@ export function useOrganizationMembers(organizacionId?: string): UseOrganization
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.miembros) {
-          // Transformar la respuesta del API al formato esperado
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const transformedMembers: OrganizationMember[] = result.miembros.map((miembro: any) => ({
             id: miembro._id || miembro.id,
             nombre: miembro.nombre + " " + miembro.apellidos, // Asumiendo que el apellido está disponible
@@ -71,18 +71,16 @@ export function useOrganizationMembers(organizacionId?: string): UseOrganization
     } catch (error) {
       console.error('Error fetching organization members:', error);
       setError('Error de conexión al cargar los miembros');
-    } finally {
-      setIsLoading(false);
+    } finally {      setIsLoading(false);
     }
-  };
+  }, [organizacionId]);
 
   useEffect(() => {
     if (organizacionId) {
-      fetchMembers();
-    } else {
+      fetchMembers();    } else {
       setIsLoading(false);
     }
-  }, [organizacionId]);
+  }, [organizacionId, fetchMembers]);
 
   return {
     members,

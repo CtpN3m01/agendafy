@@ -30,7 +30,7 @@ export function LoginForm({ onLogin, onForgotPassword, onRegister }: LoginFormPr
       if (!response.success) {
         setErrors(response.errors || {});
       }
-    } catch (error) {
+    } catch {
       setErrors({ general: ["Error de conexión. Por favor, intenta nuevamente."] });
     } finally {
       setIsLoading(false);

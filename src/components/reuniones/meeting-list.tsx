@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   CalendarDays,
-  Clock,
   Users,
   MapPin,
   Plus,
@@ -17,7 +16,7 @@ import {
   Eye,
   FileText
 } from "lucide-react";
-import { useMeetings, type ReunionData } from "@/hooks/use-meetings";
+import { useMeetings } from "@/hooks/use-meetings";
 import { CreateMeetingDialog } from "./create-meeting-dialog";
 
 interface MeetingListProps {
@@ -28,21 +27,6 @@ export function MeetingList({ organizacionId }: MeetingListProps) {
   const router = useRouter();
   const { meetings, isLoading, error, refetch } = useMeetings(organizacionId);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-
-  // Funciones de utilidad para formatear fechas
-  const formatDateTime = (dateStr: string) => {
-    if (!dateStr) return "Sin fecha";
-    const date = new Date(dateStr);
-    return new Intl.DateTimeFormat('es-ES', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }).format(date);
-  };
-
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "Sin fecha";
     const date = new Date(dateStr);

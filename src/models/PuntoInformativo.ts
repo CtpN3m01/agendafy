@@ -7,6 +7,7 @@ Los puntos informativos son simples y no requieren campos adicionales más allá
 de los definidos en el modelo base de Punto.
 */
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface IPuntoInformativo extends Document {
   // Los puntos informativos no tienen campos adicionales
   // Usan solo los campos base: titulo, comentarios, duracion, expositor, archivos
@@ -31,8 +32,8 @@ export const PuntoInformativoModel = (() => {
   if (mongoose.models.PuntoInformativo) {
     return mongoose.models.PuntoInformativo;
   }
-  
-  // Verificar si el discriminador ya existe
+    // Verificar si el discriminador ya existe
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existingDiscriminator = (PuntoModel as any).discriminators?.['Informativo'];
   if (existingDiscriminator) {
     return existingDiscriminator;

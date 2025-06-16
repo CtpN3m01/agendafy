@@ -116,7 +116,7 @@ function AppSidebar({ config, onLogout }: { config: SidebarConfig; onLogout?: ()
 
 export function AppLayout({ children, sidebarConfig, onLogout }: AppLayoutProps) {
   const config = sidebarConfig || defaultSidebarConfig;
-  const { logout, user } = useAuth();
+  const { logout } = useAuth();
 
   const handleLogout = () => {
     console.log("Cerrando sesión...");

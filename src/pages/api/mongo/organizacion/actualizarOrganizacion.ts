@@ -85,8 +85,8 @@ export default async function handler(req: NextApiRequestWithFiles, res: NextApi
       logoBuffer = req.file.buffer;
       console.log(`Nuevo logo recibido: ${req.file.originalname}, tamaño: ${req.file.size} bytes`);
     }
-
     // Preparar datos para actualizar
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const datosActualizacion: any = {};
     if (nombre) datosActualizacion.nombre = nombre;
     if (correo) datosActualizacion.correo = correo;

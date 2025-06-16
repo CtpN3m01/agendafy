@@ -53,6 +53,7 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'GET' });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   post<T>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
@@ -60,6 +61,7 @@ class ApiClient {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   put<T>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',

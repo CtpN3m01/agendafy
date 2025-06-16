@@ -1,7 +1,7 @@
 // src/components/reuniones/edit-meeting-dialog.tsx
 "use client";
 
-import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -240,6 +240,8 @@ const FileBadge = React.memo(({ file, index, onRemove }: {
   </div>
 ));
 
+FileBadge.displayName = 'FileBadge';
+
 const ExistingFileBadge = React.memo(({ fileName, index, onRemove, organizationId }: { 
   fileName: string; 
   index: number; 
@@ -271,9 +273,10 @@ const ExistingFileBadge = React.memo(({ fileName, index, onRemove, organizationI
       >
         <X className="h-4 w-4" />
       </button>
-    </div>
-  );
+    </div>  );
 });
+
+ExistingFileBadge.displayName = 'ExistingFileBadge';
 
 const MemberButton = React.memo(({ 
   member, 
@@ -309,9 +312,10 @@ const MemberButton = React.memo(({
       }`}>
         {member.esMiembro ? "Miembro" : "Invitado"}
       </span>
-    </div>
-  </Button>
+    </div>  </Button>
 ));
+
+MemberButton.displayName = 'MemberButton';
 
 // Main Component
 export function EditMeetingDialog({ 
@@ -351,7 +355,7 @@ export function EditMeetingDialog({
 
   // State
   const [isLoading, setIsLoading] = useState(false);
-  const [editingAgenda, setEditingAgenda] = useState<any>(null);
+  const [editingAgenda, setEditingAgenda] = useState<Record<string, unknown> | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -764,7 +768,7 @@ export function EditMeetingDialog({
                   onClick={() => {
                     const selectedAgenda = agendas.find(a => a._id === formData.agendaSeleccionada);
                     if (selectedAgenda) {
-                      setEditingAgenda(selectedAgenda);
+                      setEditingAgenda(selectedAgenda as unknown as Record<string, unknown>);
                       setEditDialogOpen(true);
                     }
                   }}
@@ -815,7 +819,7 @@ export function EditMeetingDialog({
               agendaToEdit={editingAgenda}
               open={editDialogOpen}
               onOpenChange={setEditDialogOpen}
-              onAgendaUpdated={(agenda) => {
+              onAgendaUpdated={() => {
                 refetchAgendas();
                 setEditDialogOpen(false);
                 setEditingAgenda(null);

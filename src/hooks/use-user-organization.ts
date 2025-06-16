@@ -1,7 +1,7 @@
 // src/hooks/use-user-organization.ts
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './use-auth';
 
 interface UserOrganization {
@@ -27,7 +27,7 @@ export function useUserOrganization(): UseUserOrganizationReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOrganization = async () => {
+  const fetchOrganization = useCallback(async () => {
     if (!isAuthenticated || !user?.id) {
       setIsLoading(false);
       return;
@@ -63,20 +63,18 @@ export function useUserOrganization(): UseUserOrganizationReturn {
       }
     } catch (error) {
       console.error('Error fetching user organization:', error);
-      setError('Error de conexión al obtener la organización');
-    } finally {
+      setError('Error de conexión al obtener la organización');    } finally {
       setIsLoading(false);
     }
-  };
+  }, [isAuthenticated, user?.id]);
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
       fetchOrganization();
-    } else {
-      setIsLoading(false);
+    } else {      setIsLoading(false);
       setOrganization(null);
     }
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.id, fetchOrganization]);
 
   return {
     organization,

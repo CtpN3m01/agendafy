@@ -37,7 +37,7 @@ export function ResetPasswordForm({ onResetPassword, onBackToLogin }: ResetPassw
           confirmarContrasena: ''
         });
       }
-    } catch (error) {
+    } catch {
       setMessage({
         type: 'error',
         text: 'Error de conexión'

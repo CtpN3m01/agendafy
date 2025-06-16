@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from './use-auth';
 import { isValidObjectId } from '@/lib/validation';
 import { ConvocadoDTO } from '@/types/ReunionDTO';
 import { subirArchivos } from '@/services/ArchivoService';
@@ -85,7 +84,8 @@ const API_ENDPOINTS = {
   DELETE: '/api/mongo/reunion/eliminarReunion',
   GET_ONE: '/api/mongo/reunion/obtenerReunion',
   GET_BY_ORG: '/api/mongo/reunion/obtenerReuniones',
-  SEND_EMAIL: '/api/mongo/reunion/enviarCorreo',  START_MEETING: '/api/mongo/reunion/iniciarReunion',
+  SEND_EMAIL: '/api/mongo/reunion/enviarCorreo',  
+  START_MEETING: '/api/mongo/reunion/iniciarReunion',
   END_MEETING: '/api/mongo/reunion/terminarReunion',
   UPDATE_POINT_ANNOTATIONS: '/api/mongo/punto/editarPunto',
 } as const;
@@ -105,19 +105,17 @@ const ERROR_MESSAGES = {
 } as const;
 
 export function useMeetings(organizacionId?: string): UseMeetingsReturn {
-  const { user } = useAuth();
   const [meetings, setMeetings] = useState<ReunionData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Función utilitaria para manejo de errores
-  const handleApiError = (error: any, defaultMessage: string): string => {
+  const [error, setError] = useState<string | null>(null);  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleApiError = useCallback((error: any, defaultMessage: string): string => {
     if (error instanceof Error) {
       return error.message;
     }
-    return defaultMessage;  };
+    return defaultMessage;
+  }, []);
 
-  const fetchMeetings = async () => {
+  const fetchMeetings = useCallback(async () => {
     if (!organizacionId) {
       setMeetings([]);
       setIsLoading(false);
@@ -151,11 +149,10 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       }
     } catch (error) {
       console.error('Error fetching meetings:', error);
-      setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al cargar las reuniones`));
-    } finally {
+      setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al cargar las reuniones`));    } finally {
       setIsLoading(false);
     }
-  };
+  }, [organizacionId, handleApiError]);
   const createMeeting = useCallback(async (data: CreateReunionData): Promise<ReunionData | null> => {
     try {
       console.log("🏗️ HOOK createMeeting - Inicio");
@@ -210,11 +207,10 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
         setError(errorData.message || ERROR_MESSAGES.CREATE_ERROR);
         return null;
       }    } catch (error) {
-      console.error('❌ Error en createMeeting hook:', error);
-      setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al crear la reunión`));
+      console.error('❌ Error en createMeeting hook:', error);      setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al crear la reunión`));
       return null;
     }
-  }, []);  const updateMeeting = useCallback(async (id: string, data: Partial<CreateReunionData>): Promise<ReunionData | null> => {
+  }, [handleApiError]);const updateMeeting = useCallback(async (id: string, data: Partial<CreateReunionData>): Promise<ReunionData | null> => {
     try {
       setError(null);
 
@@ -271,11 +267,10 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
         return null;
       }
     } catch (error) {
-      console.error('❌ Error en updateMeeting hook:', error);
-      setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al actualizar la reunión`));
+      console.error('❌ Error en updateMeeting hook:', error);      setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al actualizar la reunión`));
       return null;
     }
-  }, []);
+  }, [handleApiError]);
   const deleteMeeting = useCallback(async (id: string): Promise<boolean> => {
     try {
       setError(null);
@@ -300,7 +295,7 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al eliminar la reunión`));
       return false;
     }
-  }, []);const getMeeting = useCallback(async (id: string): Promise<ReunionData | null> => {
+  }, [handleApiError]);const getMeeting = useCallback(async (id: string): Promise<ReunionData | null> => {
     try {
       setError(null);
 
@@ -327,7 +322,7 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al obtener la reunión`));
       return null;
     }
-  }, []);
+  }, [handleApiError]);
   const sendEmail = useCallback(async (emailData: EmailData): Promise<boolean> => {
     try {
       setError(null);
@@ -351,7 +346,7 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al enviar el correo`));
       return false;
     }
-  }, []);
+  }, [handleApiError]);
   const startMeeting = useCallback(async (id: string): Promise<boolean> => {
     try {
       setError(null);
@@ -378,7 +373,7 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al iniciar la reunión`));
       return false;
     }
-  }, []);
+  }, [handleApiError]);
   const endMeeting = useCallback(async (id: string): Promise<boolean> => {
     try {
       setError(null);
@@ -405,7 +400,7 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
       setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al terminar la reunión`));
       return false;
     }
-  }, []);  const updatePointAnnotations = useCallback(async (pointId: string, annotations: string): Promise<boolean> => {
+  }, [handleApiError]);const updatePointAnnotations = useCallback(async (pointId: string, annotations: string): Promise<boolean> => {
     try {
       setError(null);
 
@@ -423,12 +418,12 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
         const errorData = await response.json();
         setError(errorData.message || ERROR_MESSAGES.ANNOTATION_ERROR);
         return false;
-      }    } catch (error) {
+      }
+    } catch (error) {
       console.error('Error updating point annotations:', error);
-      setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al actualizar las anotaciones`));
-      return false;
+      setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al actualizar las anotaciones`));      return false;
     }
-  }, []);
+  }, [handleApiError]);
 
   useEffect(() => {
     if (organizacionId) {
@@ -436,7 +431,7 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
     } else {
       setIsLoading(false);
     }
-  }, [organizacionId]);  const hookReturn = {
+  }, [organizacionId, fetchMeetings]);  const hookReturn = {
     meetings,
     isLoading,
     error,

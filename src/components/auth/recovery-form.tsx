@@ -38,7 +38,7 @@ export function RecoveryForm({ onRecovery, onBackToLogin }: RecoveryFormProps) {
       } else {
         setErrors(response.errors || { general: [response.message] });
       }
-    } catch (error) {
+    } catch {
       setErrors({ general: ["Error de conexión. Por favor, intenta nuevamente."] });
     } finally {
       setIsLoading(false);

@@ -8,12 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Calendar, 
-  Clock, 
   Users, 
   Video, 
   MapPin,
   Plus,
-  X,
   Settings
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";

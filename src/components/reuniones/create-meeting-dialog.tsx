@@ -64,7 +64,7 @@ const INITIAL_FORM_STATE: FormData = {
 };
 
 // Custom Hooks
-const useCreateMeetingForm = (organizacionId: string) => {
+const useCreateMeetingForm = () => {
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_STATE);
   const [errors, setErrors] = useState<Record<string, string>>({});
   // Estado para el formulario de invitado externo
@@ -223,6 +223,8 @@ const FileBadge = React.memo(({ file, index, onRemove }: {
   </div>
 ));
 
+FileBadge.displayName = 'FileBadge';
+
 const MemberButton = React.memo(({ 
   member, 
   isSelected, 
@@ -257,15 +259,15 @@ const MemberButton = React.memo(({
       }`}>
         {member.esMiembro ? "Miembro" : "Invitado"}
       </span>
-    </div>
-  </Button>
+    </div>  </Button>
 ));
+
+MemberButton.displayName = 'MemberButton';
 
 // Main Component
 export function CreateMeetingDialog({ 
   open, 
   onOpenChange, 
-  onCreateMeeting,
   organizacionId = ""
 }: CreateMeetingDialogProps) {
 
@@ -302,11 +304,11 @@ export function CreateMeetingDialog({
     addExternalGuest,
     removeConvocado,
     setErrors,
-  } = useCreateMeetingForm(currentOrganizationId);
+  } = useCreateMeetingForm();
 
   // State
   const [isLoading, setIsLoading] = useState(false);
-  const [editingAgenda, setEditingAgenda] = useState<any>(null);
+  const [editingAgenda, setEditingAgenda] = useState<Record<string, unknown> | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -358,8 +360,7 @@ export function CreateMeetingDialog({
         onOpenChange(false);
       } else {
         setErrors({ general: "Error al crear la reunión" });
-      }
-    } catch (error) {
+      }    } catch {
       setErrors({ general: "Error al crear la reunión" });
     } finally {
       setIsLoading(false);
@@ -706,7 +707,7 @@ export function CreateMeetingDialog({
                   onClick={() => {
                     const selectedAgenda = agendas.find(a => a._id === formData.agendaSeleccionada);
                     if (selectedAgenda) {
-                      setEditingAgenda(selectedAgenda);
+                      setEditingAgenda(selectedAgenda as unknown as Record<string, unknown>);
                       setEditDialogOpen(true);
                     }
                   }}
@@ -757,7 +758,7 @@ export function CreateMeetingDialog({
               agendaToEdit={editingAgenda}
               open={editDialogOpen}
               onOpenChange={setEditDialogOpen}
-              onAgendaUpdated={(agenda) => {
+              onAgendaUpdated={() => {
                 refetchAgendas();
                 setEditDialogOpen(false);
                 setEditingAgenda(null);

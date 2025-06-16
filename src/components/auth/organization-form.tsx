@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -138,8 +139,7 @@ export function OrganizationForm({ onComplete, showSkipButton = true }: Organiza
         router.push('/reuniones');
       } else {
         setErrors(data.errors || { general: [data.message || 'Error al crear la organización'] });
-      }
-    } catch (error) {
+      }    } catch {
       setErrors({ general: ["Error de conexión. Por favor, intenta nuevamente."] });
     } finally {
       setIsLoading(false);
@@ -249,10 +249,11 @@ export function OrganizationForm({ onComplete, showSkipButton = true }: Organiza
               <Label htmlFor="logo">Logo (Opcional)</Label>
               <div className="mt-2">
                 {logoPreview ? (
-                  <div className="relative inline-block">
-                    <img
+                  <div className="relative inline-block">                    <Image
                       src={logoPreview}
                       alt="Logo preview"
+                      width={80}
+                      height={80}
                       className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200"
                     />
                     <button

@@ -78,7 +78,7 @@ export function BoardMemberForm({
       if (success) {
         onClose();
       }
-    } catch (error) {
+    } catch {
       setError('Error al procesar la solicitud');
     } finally {
       setIsSubmitting(false);

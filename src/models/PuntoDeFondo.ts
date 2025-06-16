@@ -27,8 +27,8 @@ export const PuntoDeFondoModel = (() => {
   if (mongoose.models.PuntoDeFondo) {
     return mongoose.models.PuntoDeFondo;
   }
-  
   // Verificar si el discriminador ya existe
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existingDiscriminator = (PuntoModel as any).discriminators?.['Fondo'];
   if (existingDiscriminator) {
     return existingDiscriminator;

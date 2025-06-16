@@ -32,8 +32,8 @@ export const PuntoAprobacionModel = (() => {
   if (mongoose.models.PuntoAprobacion) {
     return mongoose.models.PuntoAprobacion;
   }
-  
   // Verificar si el discriminador ya existe
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existingDiscriminator = (PuntoModel as any).discriminators?.['Aprobacion'];
   if (existingDiscriminator) {
     return existingDiscriminator;

@@ -111,7 +111,7 @@ export function RegisterForm() {
       } else {
         setErrors(data.errors || { general: [data.message || 'Error en el registro'] });
       }
-    } catch (error) {
+    } catch {
       setErrors({ general: ["Error de conexión. Por favor, intenta nuevamente."] });
     } finally {
       setIsLoading(false);

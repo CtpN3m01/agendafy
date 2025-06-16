@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './use-auth';
 import { UserProfile } from '@/types';
 import { mapAuthUserToProfile, mapProfileToAuthUser } from '@/lib/user-mapper';
 
-// Función para normalizar datos del perfil del API
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const normalizeProfileData = (data: any): UserProfile => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const normalizeDate = (dateValue: any): Date => {
     if (!dateValue) return new Date();
     if (dateValue instanceof Date) return dateValue;
@@ -28,9 +29,8 @@ export function useUserProfile() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   // Función para obtener el perfil completo del usuario
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     if (!isAuthenticated || !token || !authUser) {
       setLoading(false);
       return;
@@ -60,11 +60,10 @@ export function useUserProfile() {
         const normalizedBasicProfile = normalizeProfileData(basicProfile);
         setUserProfile(normalizedBasicProfile);
       }
-      setError(err instanceof Error ? err.message : 'Error al cargar el perfil');
-    } finally {
+      setError(err instanceof Error ? err.message : 'Error al cargar el perfil');    } finally {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated, token, authUser]);
   // Función para actualizar el perfil
   const updateUserProfile = async (data: Partial<UserProfile>) => {
     if (!token) {
@@ -116,7 +115,7 @@ export function useUserProfile() {
       setLoading(false);
       setError(null);
     }
-  }, [isAuthenticated, authUser, token]);
+  }, [isAuthenticated, authUser, token, fetchUserProfile]);
 
   return {
     userProfile,

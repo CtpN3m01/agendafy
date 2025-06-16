@@ -2,8 +2,16 @@
 
 import { useState } from "react";
 
-export default function TokenDebugPage() {
-  const [tokenInfo, setTokenInfo] = useState<any>(null);
+export default function TokenDebugPage() {  const [tokenInfo, setTokenInfo] = useState<{
+    error?: string;
+    header?: unknown;
+    payload?: unknown;
+    isExpired?: boolean;
+    expiresAt?: string;
+    currentTime?: string;
+    raw?: string;
+    details?: unknown;
+  } | null>(null);
 
   const analyzeToken = () => {
     const token = localStorage.getItem('authToken');

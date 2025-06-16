@@ -1,7 +1,7 @@
 // src/components/agenda/create-agenda-dialog.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Plus, 
   Trash2, 
-  Edit3, 
+  Edit3,
   Clock, 
   User,
   Loader2,
@@ -35,6 +35,12 @@ import {
   FileText,
   X
 } from "lucide-react";
+
+interface Agenda {
+  _id?: string;
+  nombre?: string;
+  [key: string]: unknown;
+}
 import { useAgendas, usePuntos } from "@/hooks/use-agendas";
 import { TipoPunto } from '@/types/punto-types';
 
@@ -57,12 +63,12 @@ interface PuntoFormData {
 
 interface CreateAgendaDialogProps {
   organizacionId: string;
-  onAgendaCreated?: (agenda: any) => void;
-  onAgendaUpdated?: (agenda: any) => void;
+  onAgendaCreated?: (agenda: Agenda) => void;
+  onAgendaUpdated?: (agenda: Agenda) => void;
   trigger?: React.ReactNode;
   availableFiles?: File[]; // Archivos disponibles para asociar
   editMode?: boolean; // Modo edición
-  agendaToEdit?: any; // Agenda a editar
+  agendaToEdit?: Agenda; // Agenda a editar
   open?: boolean; // Control externo del diálogo
   onOpenChange?: (open: boolean) => void; // Callback para cambio de estado
   convocados?: ConvocadoData[]; // Lista de convocados disponibles
@@ -80,7 +86,7 @@ export function CreateAgendaDialog({
   onOpenChange: externalOnOpenChange,
   convocados = []
 }: CreateAgendaDialogProps) {
-  const { createAgendaWithPuntos, updateAgenda, getAgenda, getPuntosByAgenda } = useAgendas();
+  const { createAgendaWithPuntos, updateAgenda, getPuntosByAgenda } = useAgendas();
   const { createPunto: createPuntoAPI, updatePunto: updatePuntoAPI, deletePunto: deletePuntoAPI } = usePuntos();
   const [internalOpen, setInternalOpen] = useState(false);
   const isExternallyControlled = externalOpen !== undefined;
@@ -112,9 +118,8 @@ export function CreateAgendaDialog({
     }
   ]);
 
-  const [editingPunto, setEditingPunto] = useState<string | null>(null);
-  // Función para cargar datos de la agenda en modo edición
-  const loadAgendaData = async () => {
+  const [editingPunto, setEditingPunto] = useState<string | null>(null);  // Función para cargar datos de la agenda en modo edición
+  const loadAgendaData = useCallback(async () => {
     if (!editMode || !agendaToEdit) return;
 
     try {
@@ -160,17 +165,17 @@ export function CreateAgendaDialog({
       }
     } catch (error) {
       console.error('Error loading agenda data:', error);
-      setError('Error al cargar los datos de la agenda');
-    } finally {
+      setError('Error al cargar los datos de la agenda');    } finally {
       setIsLoading(false);
     }
-  };
+  }, [editMode, agendaToEdit, getPuntosByAgenda]);
+  
   // useEffect para cargar datos cuando se abre en modo edición
   useEffect(() => {
     if (open && editMode) {
       loadAgendaData();
     }
-  }, [open, editMode, agendaToEdit]);
+  }, [open, editMode, agendaToEdit, loadAgendaData]);
   const addPunto = () => {
     const newPunto: PuntoFormData = {
       id: editMode ? `new-${Date.now()}` : Date.now().toString(),
@@ -236,8 +241,7 @@ export function CreateAgendaDialog({
     }
   };
 
-  const updateAgendaWithPuntos = async () => {
-    if (!agendaToEdit) return null;
+  const updateAgendaWithPuntos = async () => {    if (!agendaToEdit || !agendaToEdit._id) return null;
 
     try {
       // 1. Actualizar la agenda
@@ -322,37 +326,7 @@ export function CreateAgendaDialog({
       original.detalles !== current.detalles ||
       original.anotaciones !== current.anotaciones ||
       JSON.stringify(original.archivos) !== JSON.stringify(current.archivos)
-    );
-  };
-
-  // Función para detectar si hay cambios pendientes
-  const hasUnsavedChanges = (): boolean => {
-    if (!editMode) return false;
-    
-    // Verificar cambios en el nombre de la agenda
-    if (agendaData.nombre !== (agendaToEdit?.nombre || "")) return true;
-    
-    // Verificar si hay puntos eliminados
-    if (deletedPuntoIds.length > 0) return true;
-    
-    // Verificar cambios en puntos existentes
-    for (const punto of puntos) {
-      const isNewPunto = punto.id.startsWith('new-') || !originalPuntos.find(p => p.id === punto.id);
-      if (isNewPunto) return true;
-      
-      const puntoOriginal = originalPuntos.find(p => p.id === punto.id);
-      if (puntoOriginal && hasPointChanged(puntoOriginal, punto)) return true;
-    }
-    
-    // Verificar si se eliminaron puntos que existían originalmente
-    for (const puntoOriginal of originalPuntos) {
-      if (!puntos.find(p => p.id === puntoOriginal.id) && !deletedPuntoIds.includes(puntoOriginal.id)) {
-        return true;
-      }
-    }
-    
-    return false;
-  };
+    );  };
 
   const getTotalDuration = () => {
     return puntos.reduce((total, punto) => total + punto.duracion, 0);
@@ -385,7 +359,7 @@ export function CreateAgendaDialog({
         const agendaActualizada = await updateAgendaWithPuntos();
 
         if (agendaActualizada) {
-          onAgendaUpdated?.(agendaActualizada);
+          onAgendaUpdated?.(agendaActualizada as unknown as Agenda);
           setOpen(false);
           resetForm();
         } else {
@@ -412,14 +386,13 @@ export function CreateAgendaDialog({
         );
 
         if (nuevaAgenda) {
-          onAgendaCreated?.(nuevaAgenda);
+          onAgendaCreated?.(nuevaAgenda as unknown as Agenda);
           setOpen(false);
           resetForm();
         } else {
           setError("Error al crear la agenda");
         }
-      }
-    } catch (err) {
+      }    } catch {
       setError(editMode ? "Error al actualizar la agenda" : "Error al crear la agenda");
     } finally {
       setIsLoading(false);
@@ -503,7 +476,7 @@ export function CreateAgendaDialog({
             </div>
 
             <div className="space-y-3">
-              {puntos.map((punto, index) => (
+              {puntos.map((punto) => (
                 <Card key={punto.id} className="relative">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">

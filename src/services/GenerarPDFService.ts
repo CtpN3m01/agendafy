@@ -22,11 +22,12 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
   const footerHeight = 90;
   const usableTopY = pageHeight - headerHeight - margin; // espacio usable después del header
   const usableBottomY = footerHeight + margin; // espacio antes del footer
-
   const centeredBoldPhrases = ['ORDINARIA', 'AGENDA:', 'PARTICIPANTES', 
                                'ARTÍCULOS DE LA SESIÓN:', 'AGENDA DE PUNTOS CONSULTADOS'];
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let headerImg: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let footerImg: any = null;
 
   // Dibuja encabezado (solo en la página inicial)
@@ -150,10 +151,9 @@ export async function generarPDF(acta: IActa): Promise<Buffer> {
 
   // Función para dibujar texto para la pagina inicial
   const drawTextInicial = (page: PDFPage, text: string): void => {
-    let y = usableTopY;
-    const paragraphs = text.split('\n');
+    let y = usableTopY;    const paragraphs = text.split('\n');
 
-    for (let paragraph of paragraphs) {
+    for (const paragraph of paragraphs) {
       const trimmed = paragraph.trim();
       if (!trimmed) {
         y -= lineHeight;

@@ -1,7 +1,7 @@
 // src/hooks/use-board-members.ts
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface BoardMember {
   _id: string;
@@ -26,7 +26,7 @@ export function useBoardMembers(organizationId: string | null): UseBoardMembersR
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     if (!organizationId) {
       setIsLoading(false);
       return;
@@ -56,13 +56,12 @@ export function useBoardMembers(organizationId: string | null): UseBoardMembersR
       } else {
         setError(data.message || 'Error al cargar los miembros');
       }
-    } catch (error) {
-      console.error('Error fetching board members:', error);
+    } catch (error) {      console.error('Error fetching board members:', error);
       setError('Error de conexión al cargar los miembros');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [organizationId]);
 
   const addMember = async (member: Omit<BoardMember, '_id'>): Promise<boolean> => {
     if (!organizationId) return false;
@@ -148,14 +147,13 @@ export function useBoardMembers(organizationId: string | null): UseBoardMembersR
       return false;
     }
   };
-
   useEffect(() => {
     if (organizationId) {
       fetchMembers();
     } else {
       setIsLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationId, fetchMembers]);
 
   return {
     members,

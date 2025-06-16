@@ -5,6 +5,7 @@ import { NextApiRequest } from 'next';
 const storage = multer.memoryStorage();
 
 // Filtro para solo permitir imágenes
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const fileFilter = (req: any, file: Express.Multer.File, cb: any) => {
   // Verificar que sea una imagen
   if (file.mimetype.startsWith('image/')) {
@@ -23,8 +24,10 @@ export const upload = multer({
 });
 
 // Middleware helper para Next.js
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const runMiddleware = (req: any, res: any, fn: any) => {
   return new Promise((resolve, reject) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fn(req, res, (result: any) => {
       if (result instanceof Error) {
         return reject(result);

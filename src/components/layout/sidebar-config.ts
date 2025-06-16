@@ -1,9 +1,5 @@
 import { 
-  Home, 
-  Settings, 
   Calendar, 
-  Users, 
-  Bell, 
   UserCircle, 
   Building, 
   Video
