@@ -6,8 +6,7 @@ import { ProtectedRoute } from "@/components/auth";
 import { 
   NotificacionLista, 
   NotificacionResumen, 
-  NotificacionDetalleDialog,
-  CrearNotificacionDemo 
+  NotificacionDetalleDialog
 } from "@/components/notificacion";
 import { useAuth } from "@/hooks/use-auth";
 import { useNotificaciones } from "@/hooks/use-notificaciones";
@@ -15,14 +14,12 @@ import { useNotificacionActions } from "@/hooks/use-notificacion-actions";
 import { NotificacionResponseDTO } from "@/types/NotificacionDTO";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Bell, AlertCircle, Settings } from "lucide-react";
+import { Bell, AlertCircle } from "lucide-react";
 
 export default function NotificacionesPage() {
   const { user } = useAuth();
   const [notificacionSeleccionada, setNotificacionSeleccionada] = useState<NotificacionResponseDTO | null>(null);
   const [dialogAbierto, setDialogAbierto] = useState(false);
-  const [mostrarDemo, setMostrarDemo] = useState(false);
 
   const {
     notificaciones,
@@ -91,21 +88,11 @@ export default function NotificacionesPage() {
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           {/* Header de la página */}
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-3">
-                <Bell className="h-8 w-8 text-blue-600" />
-                <h1 className="text-3xl font-bold text-gray-900">
-                  Buzón de Notificaciones
-                </h1>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setMostrarDemo(!mostrarDemo)}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                {mostrarDemo ? 'Ocultar Panel' : 'Enviar Notificación'}
-              </Button>
+            <div className="flex items-center space-x-3 mb-2">
+              <Bell className="h-8 w-8 text-blue-600" />
+              <h1 className="text-3xl font-bold text-gray-900">
+                Buzón de Notificaciones
+              </h1>
             </div>
             <p className="text-gray-600">
               Mantente al día con las notificaciones importantes de tu organización
@@ -139,21 +126,6 @@ export default function NotificacionesPage() {
             onRefrescar={handleRefrescar}
             onNotificacionClick={handleNotificacionClick}
           />
-
-          {/* Panel para crear notificaciones */}
-          {mostrarDemo && (
-            <div className="mt-8 pt-8 border-t border-gray-200">
-              <div className="mb-4">
-                <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                  Panel de Envío de Notificaciones
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Envía notificaciones a los miembros de tu organización
-                </p>
-              </div>
-              <CrearNotificacionDemo />
-            </div>
-          )}
 
           {/* Dialog para mostrar detalles de notificación */}
           <NotificacionDetalleDialog
