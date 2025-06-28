@@ -59,12 +59,17 @@ export default function LoginPage() {
   const handleRegister = () => {
     router.push('/auth/register');
   };
+
+  const handlePersonaLogin = () => {
+    router.push('/auth/persona/login');
+  };
   return (
     <AuthLayout>
       <LoginForm 
         onLogin={handleLogin} 
         onForgotPassword={handleForgotPassword}
         onRegister={handleRegister}
+        onPersonaLogin={handlePersonaLogin}
       />
     </AuthLayout>
   );
