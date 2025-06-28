@@ -9,6 +9,7 @@ interface BoardMember {
   apellidos: string;
   correo: string;
   rol: string;
+  contrasena?: string; // Opcional para incluir contraseña
 }
 
 interface UseBoardMembersReturn {
@@ -67,12 +68,16 @@ export function useBoardMembers(organizationId: string | null): UseBoardMembersR
     if (!organizationId) return false;
 
     try {
-      const response = await fetch(`/api/mongo/organizacion/agregarMiembrosJunta?id=${organizationId}`, {
+      // Usar la nueva API que maneja contraseñas
+      const response = await fetch('/api/organizacion/crear-miembro', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(member),
+        body: JSON.stringify({
+          ...member,
+          organizacion: organizationId
+        }),
       });
 
       const data = await response.json();
