@@ -4,3 +4,5 @@ export { RecoveryForm } from "./recovery-form";
 export { ResetPasswordForm } from "./reset-password-form";
 export { ProtectedRoute } from "./protected-route";
 export { OrganizationForm } from "./organization-form";
+export { PersonaLoginForm } from "./persona-login-form";
+export { SetPasswordForm } from "./set-password-form";
