@@ -82,11 +82,22 @@ export function useBoardMembers(organizationId: string | null): UseBoardMembersR
 
       const data = await response.json();
 
-      if (data.success) {
+      // Api original para agregar miembro a la organización
+      const orgResponse = await fetch(`/api/mongo/organizacion/agregarMiembrosJunta?id=${organizationId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(member),
+      });
+
+      const orgData = await orgResponse.json();
+
+      if (orgData.success && data.success) {
         await fetchMembers(); // Refetch to get updated list
         return true;
       } else {
-        setError(data.message || 'Error al agregar miembro');
+        setError(orgData.message || 'Error al agregar miembro a la organización');
         return false;
       }
     } catch (error) {
