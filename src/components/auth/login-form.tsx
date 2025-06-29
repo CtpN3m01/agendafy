@@ -8,9 +8,10 @@ interface LoginFormProps {
   onLogin: (credentials: LoginCredentials) => Promise<AuthResponse>;
   onForgotPassword: () => void;
   onRegister: () => void;
+  onPersonaLogin?: () => void;
 }
 
-export function LoginForm({ onLogin, onForgotPassword, onRegister }: LoginFormProps) {
+export function LoginForm({ onLogin, onForgotPassword, onRegister, onPersonaLogin }: LoginFormProps) {
   const [credentials, setCredentials] = useState<LoginCredentials>({
     email: "",
     password: "",
@@ -139,6 +140,19 @@ export function LoginForm({ onLogin, onForgotPassword, onRegister }: LoginFormPr
             Regístrate aquí
           </button>
         </div>
+
+        {onPersonaLogin && (
+          <div className="text-center pt-4 border-t border-gray-200">
+            <p className="text-sm text-gray-600 mb-2">¿Eres miembro de la junta directiva?</p>
+            <button
+              type="button"
+              onClick={onPersonaLogin}
+              className="text-sm text-green-600 hover:text-green-500 font-medium"
+            >
+              Acceso para miembros
+            </button>
+          </div>
+        )}
       </form>
     </div>
   );

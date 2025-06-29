@@ -9,6 +9,7 @@ interface BoardMember {
   apellidos: string;
   correo: string;
   rol: string;
+  contrasena?: string; // Opcional para incluir contraseña
 }
 
 interface UseBoardMembersReturn {
@@ -67,7 +68,22 @@ export function useBoardMembers(organizationId: string | null): UseBoardMembersR
     if (!organizationId) return false;
 
     try {
-      const response = await fetch(`/api/mongo/organizacion/agregarMiembrosJunta?id=${organizationId}`, {
+      // Usar la nueva API que maneja contraseñas
+      const response = await fetch('/api/organizacion/crear-miembro', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...member,
+          organizacion: organizationId
+        }),
+      });
+
+      const data = await response.json();
+
+      // Api original para agregar miembro a la organización
+      const orgResponse = await fetch(`/api/mongo/organizacion/agregarMiembrosJunta?id=${organizationId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,13 +91,13 @@ export function useBoardMembers(organizationId: string | null): UseBoardMembersR
         body: JSON.stringify(member),
       });
 
-      const data = await response.json();
+      const orgData = await orgResponse.json();
 
-      if (data.success) {
+      if (orgData.success && data.success) {
         await fetchMembers(); // Refetch to get updated list
         return true;
       } else {
-        setError(data.message || 'Error al agregar miembro');
+        setError(orgData.message || 'Error al agregar miembro a la organización');
         return false;
       }
     } catch (error) {

@@ -243,6 +243,7 @@ export class OrganizacionService {
     correo: string;
     rol: string;
     esMiembro: boolean;
+    contrasena?: boolean; // Indicar si tiene contraseña configurada
   }> | null> {
     try {
       const organizacion = await this.organizacionDAO.buscarPorId(id);
@@ -250,14 +251,22 @@ export class OrganizacionService {
       if (!organizacion) {
         return null;
       }
-      // Mapear los miembros al formato requerido
-      const miembrosJunta = organizacion.miembros.map(miembro => ({
-        _id: miembro.id,
-        nombre: miembro.nombre,
-        apellidos: miembro.apellidos,
-        correo: miembro.correo,
-        rol: miembro.rol,
-        esMiembro: true
+
+      // Buscar personas en la colección de Persona que pertenezcan a esta organización
+      const personasJunta = await PersonaModel.find({ 
+        organizacion: id, 
+        isActive: true 
+      }).exec();
+
+      // Mapear las personas al formato requerido
+      const miembrosJunta = personasJunta.map(persona => ({
+        _id: persona._id.toString(),
+        nombre: persona.nombre,
+        apellidos: persona.apellidos,
+        correo: persona.correo,
+        rol: persona.rol,
+        esMiembro: true,
+        contrasena: !!persona.contrasena // Convertir a boolean
       }));
 
       return miembrosJunta;

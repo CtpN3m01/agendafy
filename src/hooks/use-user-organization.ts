@@ -32,12 +32,20 @@ export function useUserOrganization(): UseUserOrganizationReturn {
       setIsLoading(false);
       return;
     }
-
+    
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/mongo/organizacion/obtenerOrganizacion?userId=${user.id}`, {
+      // Selecciona el endpoint según el tipo de usuario
+      let endpoint = '';
+      if (user.type === 'persona' && user.organizacion) {
+        endpoint = `/api/mongo/organizacion/obtenerOrganizacion?id=${user.organizacion}`;
+      } else {
+        endpoint = `/api/mongo/organizacion/obtenerOrganizacion?userId=${user.id}`;
+      }
+
+      const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -46,15 +54,21 @@ export function useUserOrganization(): UseUserOrganizationReturn {
 
       if (response.ok) {
         const responseData = await response.json();
-        if (responseData.success && responseData.organizaciones && responseData.organizaciones.length > 0) {
-          // Tomar la primera organización del usuario
+
+        // Soporta ambas respuestas: singular y array
+        if (responseData.success && responseData.organizacion) {
+          setOrganization(responseData.organizacion);
+        } else if (
+          responseData.success &&
+          responseData.organizaciones &&
+          responseData.organizaciones.length > 0
+        ) {
           setOrganization(responseData.organizaciones[0]);
         } else {
           setOrganization(null);
           setError('No se encontró organización');
         }
       } else if (response.status === 404) {
-        // El usuario no tiene organización
         setOrganization(null);
         setError('No tienes una organización asignada');
       } else {
@@ -63,10 +77,11 @@ export function useUserOrganization(): UseUserOrganizationReturn {
       }
     } catch (error) {
       console.error('Error fetching user organization:', error);
-      setError('Error de conexión al obtener la organización');    } finally {
+      setError('Error de conexión al obtener la organización');
+    } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.id, user?.type, user?.organizacion]);
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
@@ -74,7 +89,7 @@ export function useUserOrganization(): UseUserOrganizationReturn {
     } else {      setIsLoading(false);
       setOrganization(null);
     }
-  }, [isAuthenticated, user?.id, fetchOrganization]);
+  }, [isAuthenticated, user?.id, user?.organizacion, fetchOrganization]);
 
   return {
     organization,
