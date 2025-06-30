@@ -2,6 +2,55 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { connectToDatabase } from '@/lib/mongodb';
 import { ReunionService } from '@/services/ReunionService';
 import { reunionNotificacionService } from '@/services/ReunionNotificacionService';
+import { AgendaService } from '@/services/AgendaService';
+import { ConvocadoDTO } from '@/types/ReunionDTO';
+
+// Tipado explícito para los parámetros y retorno
+interface GenerarAsignacion {
+  destinatario: string;
+  datosAsignacion: {
+    reunionId: string;
+    titulo: string;
+    fechaReunion: string;
+    rolAsignado: string;
+    emisor: string;
+  };
+}
+
+async function generarAsignacionesParaPuntos(
+  reunionId: string,
+  reunionData: any,
+  agendaService: any,
+  convocados: ConvocadoDTO[]
+): Promise<GenerarAsignacion[]> {
+  // 1. Obtener la agenda con puntos poblados
+  const agenda = await agendaService.obtenerAgendaConDatos(reunionData.agenda);
+  if (!agenda || !agenda.puntos || !Array.isArray(agenda.puntos)) return [];
+
+  // 2. Mapear cada punto a la estructura de notificación de asignación
+  const asignaciones = agenda.puntos
+    .filter((punto: any) => punto.expositor && typeof punto.expositor === 'string')
+    .map((punto: any) => {
+      // Buscar el correo del expositor en la lista de convocados
+      const expositorConvocado = convocados.find(
+        (conv) => conv.nombre.trim().toLowerCase() === punto.expositor.trim().toLowerCase()
+      );
+      return {
+        destinatario: expositorConvocado?.correo || '',
+        datosAsignacion: {
+          reunionId: String(reunionId),
+          titulo: punto.titulo,
+          fechaReunion: reunionData.hora_inicio,
+          rolAsignado: punto.tipo,
+          emisor: reunionData.organizacion
+        }
+      };
+    })
+    // Solo incluir si se encontró correo válido
+    .filter((asig: GenerarAsignacion) => !!asig.destinatario);
+
+  return asignaciones;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'POST') {
@@ -11,6 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         await connectToDatabase();
         const reunionService = new ReunionService();
+        const agendaService = new AgendaService();
         const reunionData = req.body;
         
         // Validación actualizada para coincidir con los datos del hook
@@ -42,7 +92,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Enviar notificaciones de convocatoria automáticamente
         try {
             const convocados = reunionData.convocados || [];
-            
             if (convocados.length > 0) {
                 const datosNotificacion = {
                     reunionId: String(nuevaReunion._id || nuevaReunion.id),
@@ -57,13 +106,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                 const resultadosNotificacion = await reunionNotificacionService
                     .enviarNotificacionesConvocatoria(convocados, datosNotificacion);
-
-                console.log(`✅ Notificaciones enviadas: ${resultadosNotificacion.exitosas} exitosas, ${resultadosNotificacion.fallidas.length} fallidas`);
                 
                 if (resultadosNotificacion.fallidas.length > 0) {
                     console.warn('Errores en notificaciones:', resultadosNotificacion.fallidas);
                 }
             }
+
+            // Generar asignaciones para los puntos de la agenda
+            const asignaciones = await generarAsignacionesParaPuntos(
+                String(nuevaReunion._id || nuevaReunion.id),
+                reunionData,
+                agendaService,
+                convocados
+            );
+            
+            // Se recorre para enviar las notificaciones de asignación:
+            for (const { destinatario, datosAsignacion } of asignaciones) {
+                await reunionNotificacionService.enviarNotificacionAsignacion(destinatario, datosAsignacion);
+            }
+
         } catch (notificationError) {
             console.warn('Error al enviar notificaciones de convocatoria:', notificationError);
             // No fallar la creación de la reunión por errores de notificación
