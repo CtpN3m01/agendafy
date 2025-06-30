@@ -3,8 +3,7 @@ import {
   UserCircle, 
   Building, 
   Video,
-  FileText,
-  BellDotIcon
+  FileText
 } from "lucide-react";
 import { SidebarConfig } from "./types";
 

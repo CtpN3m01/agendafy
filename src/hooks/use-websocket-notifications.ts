@@ -24,6 +24,28 @@ export function useWebSocketNotifications(): WebSocketNotificationHook {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
 
+  // Fallback: cargar notificaciones via API tradicional
+  const loadNotificationsViaAPI = useCallback(async () => {
+    if (!user?.correo || user.type !== 'persona') return;
+
+    try {
+      const [notificacionesRes, conteoRes] = await Promise.all([
+        fetch(`/api/mongo/notificacion/destinatario?destinatario=${encodeURIComponent(user.correo)}`),
+        fetch(`/api/mongo/notificacion/conteo-no-leidas?destinatario=${encodeURIComponent(user.correo)}`)
+      ]);
+
+      if (notificacionesRes.ok && conteoRes.ok) {
+        const notificacionesData = await notificacionesRes.json();
+        const conteoData = await conteoRes.json();
+        
+        setNotificaciones(notificacionesData.notificaciones || []);
+        setConteoNoLeidas(conteoData.conteo || 0);
+      }
+    } catch (err) {
+      console.error('Error al cargar notificaciones via API:', err);
+    }
+  }, [user?.correo, user?.type]);
+
   // Función para conectar WebSocket
   const connect = useCallback(() => {
     if (!user?.correo || user.type !== 'persona') {
@@ -68,14 +90,12 @@ export function useWebSocketNotifications(): WebSocketNotificationHook {
               break;
               
             case 'NOTIFICATION_DELETED':
-              setNotificaciones(prev => 
-                prev.filter(notif => notif.id !== data.notificationId)
-              );
-              setConteoNoLeidas(prev => {
-                const deletedNotification = notificaciones.find(n => n.id === data.notificationId);
-                return deletedNotification && !deletedNotification.leida 
-                  ? Math.max(0, prev - 1) 
-                  : prev;
+              setNotificaciones(prev => {
+                const deletedNotification = prev.find(n => n.id === data.notificationId);
+                if (deletedNotification && !deletedNotification.leida) {
+                  setConteoNoLeidas(count => Math.max(0, count - 1));
+                }
+                return prev.filter(notif => notif.id !== data.notificationId);
               });
               break;
               
@@ -119,29 +139,7 @@ export function useWebSocketNotifications(): WebSocketNotificationHook {
       // Fallback a polling si WebSocket falla
       loadNotificationsViaAPI();
     }
-  }, [user?.correo, user?.type]);
-
-  // Fallback: cargar notificaciones via API tradicional
-  const loadNotificationsViaAPI = useCallback(async () => {
-    if (!user?.correo || user.type !== 'persona') return;
-
-    try {
-      const [notificacionesRes, conteoRes] = await Promise.all([
-        fetch(`/api/mongo/notificacion/destinatario?destinatario=${encodeURIComponent(user.correo)}`),
-        fetch(`/api/mongo/notificacion/conteo-no-leidas?destinatario=${encodeURIComponent(user.correo)}`)
-      ]);
-
-      if (notificacionesRes.ok && conteoRes.ok) {
-        const notificacionesData = await notificacionesRes.json();
-        const conteoData = await conteoRes.json();
-        
-        setNotificaciones(notificacionesData.notificaciones || []);
-        setConteoNoLeidas(conteoData.conteo || 0);
-      }
-    } catch (err) {
-      console.error('Error al cargar notificaciones via API:', err);
-    }
-  }, [user?.correo, user?.type]);
+  }, [user?.correo, user?.type, loadNotificationsViaAPI]);
 
   // Función para marcar como leída
   const marcarComoLeida = useCallback(async (id: string): Promise<boolean> => {
@@ -185,11 +183,13 @@ export function useWebSocketNotifications(): WebSocketNotificationHook {
         // El WebSocket debería recibir la actualización automáticamente
         // Si no hay WebSocket, actualizar localmente
         if (!isConnected) {
-          const notificacionEliminada = notificaciones.find(n => n.id === id);
-          setNotificaciones(prev => prev.filter(notif => notif.id !== id));
-          if (notificacionEliminada && !notificacionEliminada.leida) {
-            setConteoNoLeidas(prev => Math.max(0, prev - 1));
-          }
+          setNotificaciones(prev => {
+            const notificacionEliminada = prev.find(n => n.id === id);
+            if (notificacionEliminada && !notificacionEliminada.leida) {
+              setConteoNoLeidas(count => Math.max(0, count - 1));
+            }
+            return prev.filter(notif => notif.id !== id);
+          });
         }
         return true;
       }
@@ -198,7 +198,7 @@ export function useWebSocketNotifications(): WebSocketNotificationHook {
       console.error('Error al eliminar notificación:', err);
       return false;
     }
-  }, [isConnected, notificaciones]);
+  }, [isConnected]);
 
   // Conectar cuando el usuario esté disponible
   useEffect(() => {
@@ -214,7 +214,7 @@ export function useWebSocketNotifications(): WebSocketNotificationHook {
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [connect]);
+  }, [user?.correo, user?.type, connect]);
 
   // Limpiar al desmontar
   useEffect(() => {

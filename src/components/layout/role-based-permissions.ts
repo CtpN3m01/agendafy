@@ -99,6 +99,7 @@ export class PermissionContext {
  * Hook para obtener permisos del usuario actual
  */
 export function useUserPermissions() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { useAuth } = require('@/hooks/use-auth');
   const { user } = useAuth();
   

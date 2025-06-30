@@ -18,7 +18,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, Trash2, GripVertical, Save, X, FileText, Clock, Users } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProvided, DraggableProvided, DraggableStateSnapshot } from '@hello-pangea/dnd';
@@ -164,7 +163,7 @@ export function AgendaEditDialog({
     setErrors(newErrors);
   };
 
-  const updatePunto = (index: number, field: keyof PuntoAgenda, value: any) => {
+  const updatePunto = (index: number, field: keyof PuntoAgenda, value: string | number | undefined) => {
     setFormData(prev => ({
       ...prev,
       puntos: prev.puntos.map((punto, i) => 
@@ -286,7 +285,7 @@ export function AgendaEditDialog({
                   <div className="text-center py-8 text-muted-foreground">
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No hay puntos en la agenda</p>
-                    <p className="text-sm">Haga clic en "Agregar Punto" para empezar</p>
+                    <p className="text-sm">Haga clic en &quot;Agregar Punto&quot; para empezar</p>
                   </div>
                 ) : (
                   <DragDropContext onDragEnd={onDragEnd}>
@@ -420,7 +419,7 @@ export function AgendaEditDialog({
           </Button>
           <Button onClick={handleSave} disabled={isSaving || isLoading}>
             <Save className="h-4 w-4 mr-2" />
-            {isSaving ? 'Guardando...' : (mode === 'create' ? 'Crear Agenda' : 'Guardar Cambios')}
+            {isSaving ? "Guardando..." : (mode === "create" ? "Crear Agenda" : "Guardar Cambios")}
           </Button>
         </DialogFooter>
       </DialogContent>

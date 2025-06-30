@@ -23,7 +23,6 @@ import {
   DialogTitle 
 } from '@/components/ui/dialog';
 import { Loader2, Edit, Trash2, Eye, Plus } from "lucide-react";
-import { Label } from '@/components/ui/label';
 
 interface AgendaResponse {
   _id: string;
@@ -143,14 +142,12 @@ function AgendaListSkeleton() {
 
 export default function AgendasPage() {
   const { organization, isLoading: orgLoading, error: orgError } = useUserOrganization();
-  const { members, isLoading: membersLoading } = useOrganizationMembers(organization?.id);
+  const { members } = useOrganizationMembers(organization?.id);
   const { 
     agendas, 
     isLoading: agendasLoading, 
     error, 
     deleteAgenda, 
-    updateAgenda,
-    createAgenda,
     getAgenda,
     refetch 
   } = useAgendas(organization?.id);
@@ -162,14 +159,13 @@ export default function AgendasPage() {
   const [searchTerm, setSearchTerm] = useState('');
   
   // Estados para los nuevos diálogos
-  const [viewingAgenda, setViewingAgenda] = useState<any>(null);
+  const [viewingAgenda, setViewingAgenda] = useState<unknown>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isViewLoading, setIsViewLoading] = useState(false);
   
-  const [editingAgenda, setEditingAgenda] = useState<any>(null);
+  const [editingAgenda, setEditingAgenda] = useState<unknown>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState<'create' | 'edit'>('edit');
-  const [isEditLoading, setIsEditLoading] = useState(false);
   
   // Estados para modal de confirmación de eliminación
   const [deletingAgenda, setDeletingAgenda] = useState<AgendaResponse | null>(null);
@@ -221,7 +217,6 @@ export default function AgendasPage() {
 
   const handleEdit = async (agenda: AgendaResponse) => {
     try {
-      setIsEditLoading(true);
       setEditMode('edit');
       setIsEditDialogOpen(true);
       
@@ -232,8 +227,6 @@ export default function AgendasPage() {
       }
     } catch (error) {
       console.error('Error al cargar agenda para edición:', error);
-    } finally {
-      setIsEditLoading(false);
     }
   };
 
@@ -248,12 +241,12 @@ export default function AgendasPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleAgendaCreated = async (newAgenda: any) => {
+  const handleAgendaCreated = async () => {
     // Refrescar la lista de agendas
     await refetch();
   };
 
-  const handleAgendaUpdated = async (updatedAgenda: any) => {
+  const handleAgendaUpdated = async () => {
     // Refrescar la lista de agendas
     await refetch();
   };
@@ -430,7 +423,7 @@ export default function AgendasPage() {
         <AgendaViewDialog
           isOpen={isViewDialogOpen}
           onClose={handleCloseViewDialog}
-          agenda={viewingAgenda}
+          agenda={viewingAgenda as never}
           isLoading={isViewLoading}
           onEdit={permissions.canEdit ? handleEditFromView : undefined}
         />
@@ -440,7 +433,7 @@ export default function AgendasPage() {
           onAgendaCreated={handleAgendaCreated}
           onAgendaUpdated={handleAgendaUpdated}
           editMode={editMode === 'edit'}
-          agendaToEdit={editingAgenda}
+          agendaToEdit={editingAgenda as never}
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           convocados={convocados}

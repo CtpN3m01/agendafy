@@ -151,7 +151,7 @@ export function AppLayout({ children, sidebarConfig, onLogout }: AppLayoutProps)
   } = useNotificaciones(user?.type === 'persona' ? user?.correo : undefined);
 
   // Hook para notificaciones en tiempo real via SSE (solo para miembros de la junta)
-  const sseNotifications = useSSENotifications();
+  useSSENotifications();
 
   const handleLogout = () => {
     console.log("Cerrando sesión...");

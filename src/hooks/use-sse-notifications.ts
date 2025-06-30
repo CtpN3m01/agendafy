@@ -4,7 +4,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './use-auth';
 import { useNotificaciones } from './use-notificaciones';
-import { NotificacionResponseDTO } from '@/types';
 
 interface SSENotificationHook {
   isConnected: boolean;

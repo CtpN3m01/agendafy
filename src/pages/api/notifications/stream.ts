@@ -84,7 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 // Función para enviar notificación a un usuario específico
-export function sendNotificationToUser(userEmail: string, notification: any) {
+export function sendNotificationToUser(userEmail: string, notification: unknown) {
   const res = connections.get(userEmail);
   
   if (res && !res.destroyed) {

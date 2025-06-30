@@ -1,11 +1,11 @@
 // src/pages/api/websocket.ts
 import { NextApiRequest, NextApiResponse } from 'next';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { parse } from 'url';
 
 // Mapa para almacenar conexiones WebSocket por email de usuario
-const connections = new Map<string, any>();
+const connections = new Map<string, WebSocket>();
 
 // Crear servidor WebSocket
 let wss: WebSocketServer | null = null;
@@ -19,7 +19,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         path: '/notifications'
       });
 
-      wss.on('connection', (ws: any, request: IncomingMessage) => {
+      wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
         const parsedUrl = parse(request.url || '', true);
         const userEmail = parsedUrl.query.email as string;
 
@@ -90,10 +90,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 }
 
 // Función para enviar notificación a un usuario específico
-export function sendNotificationToUser(userEmail: string, notification: any) {
+export function sendNotificationToUser(userEmail: string, notification: unknown) {
   const ws = connections.get(userEmail);
   
-  if (ws && ws.readyState === 1) { // WebSocket.OPEN
+    if (ws && ws.readyState === WebSocket.OPEN) {
     try {
       ws.send(JSON.stringify({
         type: 'NEW_NOTIFICATION',
@@ -112,7 +112,7 @@ export function sendNotificationToUser(userEmail: string, notification: any) {
 }
 
 // Función para enviar notificación a múltiples usuarios
-export function sendNotificationToUsers(userEmails: string[], notification: any) {
+export function sendNotificationToUsers(userEmails: string[], notification: unknown) {
   const results = userEmails.map(email => {
     return {
       email,
@@ -130,11 +130,11 @@ export function getConnectedUsers(): string[] {
 }
 
 // Función para broadcast a todos los usuarios conectados
-export function broadcastToAll(message: any) {
+export function broadcastToAll(message: unknown) {
   let sentCount = 0;
   
   connections.forEach((ws, userEmail) => {
-    if (ws.readyState === 1) { // WebSocket.OPEN
+    if (ws.readyState === WebSocket.OPEN) {
       try {
         ws.send(JSON.stringify(message));
         sentCount++;

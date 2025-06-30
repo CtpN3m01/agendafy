@@ -28,6 +28,7 @@ export class SidebarConfigVisitor implements SidebarVisitor {
       Video,
       FileText,
       Settings
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     } = require("lucide-react");
 
     return {
@@ -87,6 +88,7 @@ export class SidebarConfigVisitor implements SidebarVisitor {
       Video,
       FileText,
       BellDotIcon
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     } = require("lucide-react");
 
     return {

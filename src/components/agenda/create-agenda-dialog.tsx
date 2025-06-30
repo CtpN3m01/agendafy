@@ -179,14 +179,14 @@ export function CreateAgendaDialog({
     } finally {
       setIsLoading(false);
     }
-  }, [editMode, agendaToEdit?._id, agendaToEdit?.nombre, getPuntosByAgenda, dataLoaded]);
+  }, [editMode, agendaToEdit, getPuntosByAgenda, dataLoaded]);
   
   // useEffect para cargar datos cuando se abre en modo edición
   useEffect(() => {
     if (open && editMode && agendaToEdit?._id && !dataLoaded) {
       loadAgendaData();
     }
-  }, [open, editMode, agendaToEdit?._id, dataLoaded]); // Remover loadAgendaData de las dependencias
+  }, [open, editMode, agendaToEdit?._id, dataLoaded, loadAgendaData]); // Agregar loadAgendaData
 
   // useEffect para resetear estado cuando se cierra el diálogo
   useEffect(() => {
