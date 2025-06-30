@@ -1,4 +1,3 @@
-// src/hooks/use-organization.ts
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -27,9 +26,11 @@ export function useOrganization(): UseOrganizationReturn {
   const [organization, setOrganization] = useState<OrganizationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const fetchOrganization = useCallback(async () => {
     if (!user?.id) {
       setIsLoading(false);
+      setOrganization(null);
       return;
     }
 
@@ -37,9 +38,15 @@ export function useOrganization(): UseOrganizationReturn {
       setIsLoading(true);
       setError(null);
 
-      // Construir URL con userId como query parameter
-      const url = new URL('/api/mongo/organizacion/obtenerOrganizacion', window.location.origin);
-      url.searchParams.append('userId', user.id);
+      let url: URL;
+      // Si es persona y tiene organización, buscar por id de organización
+      if (user.type === 'persona' && user.organizacion) {
+        url = new URL('/api/mongo/organizacion/obtenerOrganizacion', window.location.origin);
+        url.searchParams.append('id', user.organizacion);
+      } else {
+        url = new URL('/api/mongo/organizacion/obtenerOrganizacion', window.location.origin);
+        url.searchParams.append('userId', user.id);
+      }
 
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -51,14 +58,15 @@ export function useOrganization(): UseOrganizationReturn {
       const data = await response.json();
 
       if (data.success) {
-        // Si hay organizaciones, tomar la primera (un usuario debería tener solo una)
-        if (data.organizaciones && data.organizaciones.length > 0) {
+        // Soporta respuesta singular y array
+        if (data.organizacion) {
+          setOrganization(data.organizacion);
+        } else if (data.organizaciones && data.organizaciones.length > 0) {
           setOrganization(data.organizaciones[0]);
         } else {
           setOrganization(null);
         }
       } else {
-        // Si el error es que no se encontró organización, no es un error
         if (response.status === 404 || data.message?.includes('no encontrada')) {
           setOrganization(null);
         } else {
@@ -67,15 +75,18 @@ export function useOrganization(): UseOrganizationReturn {
       }
     } catch (error) {
       console.error('Error fetching organization:', error);
-      setError('Error de conexión al cargar la organización');    } finally {
+      setError('Error de conexión al cargar la organización');
+    } finally {
       setIsLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, user?.type, user?.organizacion]);
+
   useEffect(() => {
     if (user?.id) {
       fetchOrganization();
     } else {
       setIsLoading(false);
+      setOrganization(null);
     }
   }, [user, fetchOrganization]);
 

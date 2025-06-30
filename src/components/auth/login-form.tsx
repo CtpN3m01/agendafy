@@ -50,6 +50,7 @@ export function LoginForm({ onLogin, onForgotPassword, onRegister }: LoginFormPr
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Iniciar Sesión</h2>
         <p className="text-gray-600">Accede a tu cuenta de Agendafy</p>
+        <p className="text-sm text-blue-600 mt-1">Para administradores y miembros de junta</p>
       </div>
 
       {errors.general && (

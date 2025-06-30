@@ -11,9 +11,12 @@ export interface IPersona extends Document {
   nombre: string;
   apellidos: string;
   correo: string;
+  contrasena?: string; // Opcional para personas que pueden hacer login
   rol: 'Presidente' | 'Vicepresidente' | 'Tesorero' | 'Vocal' | 'Miembro' | 'Administrador';
   organizacion: mongoose.Types.ObjectId; // Referencia a la organización
   usuario?: mongoose.Types.ObjectId; // Opcional: referencia al usuario si es miembro registrado
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -31,6 +34,7 @@ export const PersonaSchema = new Schema<IPersona>({
   nombre: { type: String, required: true },
   apellidos: { type: String, required: true },
   correo: { type: String, required: true },
+  contrasena: { type: String }, // Opcional para personas que pueden hacer login
   rol: {
     type: String,
     enum: ['Presidente', 'Vicepresidente', 'Tesorero', 'Vocal', 'Miembro', 'Administrador'],
@@ -38,6 +42,8 @@ export const PersonaSchema = new Schema<IPersona>({
   },
   organizacion: { type: Schema.Types.ObjectId, ref: 'Organizacion', required: true },
   usuario: { type: Schema.Types.ObjectId, ref: 'Usuario' }, // Nueva referencia opcional
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date },
   isActive: { type: Boolean, default: true }
 }, {
   timestamps: true

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Users, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Loader2, Link } from "lucide-react";
 import { useBoardMembers } from "@/hooks/use-board-members";
 import { BoardMemberForm } from "./board-member-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,6 +17,7 @@ interface BoardMember {
   apellidos: string;
   correo: string;
   rol: string;
+  contrasena?: string; // Opcional para incluir contraseña
 }
 
 interface BoardMembersTableProps {
@@ -68,6 +69,16 @@ export function BoardMembersTable({ organizationId }: BoardMembersTableProps) {
     if (!success) {
       // El error ya se maneja en el hook
     }
+  };
+
+  const handleCopyPasswordLink = (email: string) => {
+    const link = `${window.location.origin}/auth/set-password?email=${encodeURIComponent(email)}`;
+    navigator.clipboard.writeText(link).then(() => {
+      // Aquí podrías agregar una notificación de éxito
+      alert('Enlace copiado al portapapeles');
+    }).catch(() => {
+      alert('Error al copiar enlace');
+    });
   };
   const openEditForm = (member: BoardMember) => {
     console.log('Opening edit form for member:', member);
@@ -172,6 +183,7 @@ export function BoardMembersTable({ organizationId }: BoardMembersTableProps) {
                     <TableHead>Apellidos</TableHead>
                     <TableHead>Correo</TableHead>
                     <TableHead>Posición</TableHead>
+                    <TableHead>Estado Acceso</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -190,8 +202,26 @@ export function BoardMembersTable({ organizationId }: BoardMembersTableProps) {
                           {member.rol || 'Sin posición'}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={member.contrasena ? 'default' : 'secondary'}
+                          className={member.contrasena ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
+                        >
+                          {member.contrasena ? 'Acceso Activo' : 'Sin Contraseña'}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {!member.contrasena && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCopyPasswordLink(member.correo)}
+                              title="Copiar enlace para configurar contraseña"
+                            >
+                              <Link className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"

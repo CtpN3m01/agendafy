@@ -50,7 +50,8 @@ export function BoardMemberForm({
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (isOpen) {
-      if (isEditing && member) {        setFormData({
+      if (isEditing && member) {        
+        setFormData({
           nombre: member.nombre || '',
           apellidos: member.apellidos || '',
           correo: member.correo || '',
@@ -102,7 +103,7 @@ export function BoardMemberForm({
           <DialogDescription>
             {isEditing 
               ? 'Modifica la información del miembro de la junta directiva.'
-              : 'Agrega un nuevo miembro a la junta directiva.'
+              : 'Agrega un nuevo miembro a la junta directiva. Se generará una contraseña temporal que será enviada por correo electrónico.'
             }
           </DialogDescription>
         </DialogHeader>

@@ -2,6 +2,9 @@ import { OrganizacionDAOImpl, IOrganizacionDAO } from '@/dao/OrganizacionDAO';
 import { CrearOrganizacionDTO, OrganizacionResponseDTO, ActualizarOrganizacionDTO } from '@/types/OrganizacionDTO';
 import { UsuarioModel } from '@/models/Usuario';
 import { PersonaModel } from '@/models/Persona';
+import { EmailService } from './EmailService';
+import { generateRandomPassword } from '@/lib/utils';
+import { HashUtil } from '@/lib/hash';
 
 export class OrganizacionService {
   private organizacionDAO: IOrganizacionDAO;
@@ -243,6 +246,7 @@ export class OrganizacionService {
     correo: string;
     rol: string;
     esMiembro: boolean;
+    contrasena?: boolean; // Indicar si tiene contraseña configurada
   }> | null> {
     try {
       const organizacion = await this.organizacionDAO.buscarPorId(id);
@@ -250,14 +254,22 @@ export class OrganizacionService {
       if (!organizacion) {
         return null;
       }
-      // Mapear los miembros al formato requerido
-      const miembrosJunta = organizacion.miembros.map(miembro => ({
-        _id: miembro.id,
-        nombre: miembro.nombre,
-        apellidos: miembro.apellidos,
-        correo: miembro.correo,
-        rol: miembro.rol,
-        esMiembro: true
+
+      // Buscar personas en la colección de Persona que pertenezcan a esta organización
+      const personasJunta = await PersonaModel.find({ 
+        organizacion: id, 
+        isActive: true 
+      }).exec();
+
+      // Mapear las personas al formato requerido
+      const miembrosJunta = personasJunta.map(persona => ({
+        _id: persona._id.toString(),
+        nombre: persona.nombre,
+        apellidos: persona.apellidos,
+        correo: persona.correo,
+        rol: persona.rol,
+        esMiembro: true,
+        contrasena: !!persona.contrasena // Convertir a boolean
       }));
 
       return miembrosJunta;
@@ -307,21 +319,56 @@ export class OrganizacionService {
           };
         }
         
-        // Actualizar datos si la persona ya existe pero no es miembro
-        await PersonaModel.findByIdAndUpdate(miembroExistente._id, {
-          nombre: datos.nombre,
-          apellidos: datos.apellidos,
-          correo: datos.correo.toLowerCase(),
-          rol: datos.rol || 'Vocal',
-          organizacion: organizacionId // ← Asegurar que tiene la organización
-        }).exec();
+        // Generar contraseña temporal si la persona no tiene contraseña
+        let contrasenasTemporal = null;
+        if (!miembroExistente.contrasena) {
+          contrasenasTemporal = generateRandomPassword(12);
+          const hashedPassword = await HashUtil.hash(contrasenasTemporal);
+          
+          // Actualizar datos incluyendo la contraseña
+          await PersonaModel.findByIdAndUpdate(miembroExistente._id, {
+            nombre: datos.nombre,
+            apellidos: datos.apellidos,
+            correo: datos.correo.toLowerCase(),
+            rol: datos.rol || 'Vocal',
+            organizacion: organizacionId,
+            contrasena: hashedPassword
+          }).exec();
+        } else {
+          // Actualizar datos sin cambiar la contraseña existente
+          await PersonaModel.findByIdAndUpdate(miembroExistente._id, {
+            nombre: datos.nombre,
+            apellidos: datos.apellidos,
+            correo: datos.correo.toLowerCase(),
+            rol: datos.rol || 'Vocal',
+            organizacion: organizacionId
+          }).exec();
+        }
 
         // Agregar a la organización
         await this.organizacionDAO.agregarMiembro(organizacionId, miembroExistente._id.toString());
 
+        // Enviar credenciales por email solo si se generó una nueva contraseña
+        if (contrasenasTemporal) {
+          try {
+            const emailService = new EmailService();
+            await emailService.enviarCredencialesTemporales(
+              datos.correo.toLowerCase(),
+              `${datos.nombre} ${datos.apellidos}`,
+              contrasenasTemporal,
+              organizacion.nombre
+            );
+          } catch (emailError) {
+            console.error('Error al enviar email de credenciales:', emailError);
+            // No fallar el proceso por error de email, solo registrar
+          }
+        }
+
         return {
           success: true,
-          message: 'Miembro agregado exitosamente',
+          message: contrasenasTemporal 
+            ? 'Miembro agregado exitosamente. Se han enviado las credenciales por correo electrónico.'
+            : 'Miembro agregado exitosamente.',
           miembro: {
             id: miembroExistente._id.toString(),
             nombre: datos.nombre,
@@ -332,13 +379,18 @@ export class OrganizacionService {
           }
         };
       } else {        
-        // Crear nueva persona
+        // Generar contraseña temporal para nueva persona
+        const contrasenasTemporal = generateRandomPassword(12);
+        const hashedPassword = await HashUtil.hash(contrasenasTemporal);
+        
+        // Crear nueva persona con contraseña
         const nuevaPersona = new PersonaModel({
           nombre: datos.nombre,
           apellidos: datos.apellidos,
           correo: datos.correo.toLowerCase(),
           rol: datos.rol || 'Vocal',
-          organizacion: organizacionId
+          organizacion: organizacionId,
+          contrasena: hashedPassword
         });
 
         const personaGuardada = await nuevaPersona.save();
@@ -346,9 +398,23 @@ export class OrganizacionService {
         // Agregar a la organización
         await this.organizacionDAO.agregarMiembro(organizacionId, personaGuardada._id.toString());
 
+        // Enviar credenciales por email
+        try {
+          const emailService = new EmailService();
+          await emailService.enviarCredencialesTemporales(
+            datos.correo.toLowerCase(),
+            `${datos.nombre} ${datos.apellidos}`,
+            contrasenasTemporal,
+            organizacion.nombre
+          );
+        } catch (emailError) {
+          console.error('Error al enviar email de credenciales:', emailError);
+          // No fallar el proceso por error de email, solo registrar
+        }
+
         return {
           success: true,
-          message: 'Miembro agregado exitosamente',
+          message: 'Miembro agregado exitosamente. Se han enviado las credenciales por correo electrónico.',
           miembro: {
             id: personaGuardada._id.toString(),
             nombre: personaGuardada.nombre,

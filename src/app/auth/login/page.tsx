@@ -21,7 +21,7 @@ export default function LoginPage() {
 
   const handleLogin = async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/unified-login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,6 +59,7 @@ export default function LoginPage() {
   const handleRegister = () => {
     router.push('/auth/register');
   };
+
   return (
     <AuthLayout>
       <LoginForm 

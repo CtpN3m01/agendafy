@@ -246,3 +246,6 @@ export interface PaginationInfo {
   hasNext: boolean;
   hasPrev: boolean;
 }
+
+// Exportar tipos de Notificación
+export * from './NotificacionDTO';
