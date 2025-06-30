@@ -39,11 +39,14 @@ import {
   Pause,
   ThumbsUp,
   ThumbsDown,
-  Vote
+  Vote,
+  Eye,
+  Shield
 } from "lucide-react";
 import { usePuntos } from "@/hooks/use-agendas";
 import { useMeetings, type ReunionData } from "@/hooks/use-meetings";
 import { useUserOrganization } from "@/hooks/use-user-organization";
+import { useUserPermissions, useUserRole } from "@/hooks/use-user-permissions";
 import { EditMeetingDialog } from "@/components/reuniones";
 import { toast } from "sonner";
 
@@ -86,7 +89,10 @@ interface PuntoDetallado {
 
 export default function MeetingDetailPage() {
   const params = useParams();
-  const router = useRouter();  const { organization } = useUserOrganization();
+  const router = useRouter();
+  const { organization } = useUserOrganization();
+  const permissions = useUserPermissions();
+  const { role, displayName } = useUserRole();
   const { getMeeting, deleteMeeting, sendEmail, startMeeting, endMeeting } = useMeetings(organization?.id);
   const { updatePunto } = usePuntos();
   const [meeting, setMeeting] = useState<ReunionData | null>(null);
@@ -790,11 +796,27 @@ export default function MeetingDetailPage() {
       </ProtectedRoute>
     );
   }
-
   return (
     <ProtectedRoute>
       <AppLayout>
         <div className="space-y-6">
+          {/* Indicador de rol del usuario */}
+          {role === 'board-member' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <Shield className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="text-sm font-medium text-blue-900">
+                    Accediendo como: {displayName}
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    Está visualizando la información de la reunión. Los controles administrativos están restringidos.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header con botones de acción */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
@@ -813,84 +835,112 @@ export default function MeetingDetailPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSendEmail}
-                disabled={isSendingEmail || isMeetingEnded()}
-              >
-                {isSendingEmail ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Mail className="h-4 w-4 mr-2" />
-                )}
-                Enviar Correo
-              </Button>
-              {/* Botón Editar: solo si NO ha iniciado NI terminado */}
-              {!isMeetingStarted() && !isMeetingEnded() && (
+            
+            {/* Botones de acción - Solo para administradores */}
+            <div className="flex items-center gap-2">
+              {/* Botón Ver (para miembros de junta) */}
+              {role === 'board-member' && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleEdit}
+                  disabled
                 >
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  Editar
+                  <Eye className="h-4 w-4 mr-2" />
+                  Modo Lectura
                 </Button>
               )}
 
-              {/* Botón Terminar Acta: solo si ya terminó */}
-              {isMeetingEnded() && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleFinishAct(meeting._id)}
-                >
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  Terminar Acta
-                </Button>
-              )}
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
+              {/* Botones administrativos - Solo para administradores */}
+              {permissions.canEdit && (
+                <>
                   <Button
-                    variant="destructive"
+                    variant="outline"
                     size="sm"
-                    disabled={isDeleting || isMeetingStarted()}
+                    onClick={handleSendEmail}
+                    disabled={isSendingEmail || isMeetingEnded()}
                   >
-                    {isDeleting ? (
+                    {isSendingEmail ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Mail className="h-4 w-4 mr-2" />
                     )}
-                    Eliminar
+                    Enviar Correo
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>¿Eliminar reunión?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta acción no se puede deshacer. La reunión será eliminada permanentemente.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete}>
+                  
+                  {/* Botón Editar: solo si NO ha iniciado NI terminado */}
+                  {!isMeetingStarted() && !isMeetingEnded() && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEdit}
+                    >
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                  )}
+
+                  {/* Botón Terminar Acta: solo si ya terminó */}
+                  {isMeetingEnded() && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleFinishAct(meeting._id)}
+                    >
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Terminar Acta
+                    </Button>
+                  )}
+                </>
+              )}
+
+              {/* Botón Eliminar - Solo para administradores */}
+              {permissions.canDelete && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={isDeleting || isMeetingStarted()}
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 mr-2" />
+                      )}
                       Eliminar
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Eliminar reunión?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta acción no se puede deshacer. La reunión será eliminada permanentemente.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete}>
+                        Eliminar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </div>
 
           {/* Información principal */}
-          <Card>            <CardHeader>
+          <Card>
+            <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Información General</CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="default">
                     {meeting.tipo_reunion}
                   </Badge>
-                  {!isMeetingStarted() && !isMeetingEnded() && (
+                  
+                  {/* Controles de reunión - Solo para administradores */}
+                  {permissions.canEdit && !isMeetingStarted() && !isMeetingEnded() && (
                     <Button
                       variant="default"
                       size="sm"
@@ -905,6 +955,8 @@ export default function MeetingDetailPage() {
                       Iniciar Reunión
                     </Button>
                   )}
+                  
+                  {/* Estados de la reunión */}
                   {isMeetingStarted() && !isMeetingEnded() && (
                     <Badge variant="outline" className="text-green-600 border-green-600">
                       Reunión en Curso
@@ -1180,8 +1232,8 @@ export default function MeetingDetailPage() {
                                 </div>
                               )}
                             </div>
-                          )}{/* Cronómetro y botón de iniciar punto - Solo visible si la reunión ha iniciado y el punto no ha sido completado */}
-                          {isMeetingStarted() && !isMeetingEnded() && !punto.anotaciones && (
+                          )}                          {/* Cronómetro y botón de iniciar punto - Solo visible si la reunión ha iniciado, el punto no ha sido completado Y el usuario es admin */}
+                          {permissions.canEdit && isMeetingStarted() && !isMeetingEnded() && !punto.anotaciones && (
                             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
@@ -1283,8 +1335,8 @@ export default function MeetingDetailPage() {
                                 })}
                               </div>
                             </div>
-                          )}                          {/* Anotaciones del punto - Visible si la reunión ha iniciado (incluso si ha terminado) */}
-                          {isMeetingStarted() && (
+                          )}                          {/* Anotaciones del punto - Visible si la reunión ha iniciado Y el usuario es admin */}
+                          {permissions.canEdit && isMeetingStarted() && (
                             <div className="mt-4 p-3 bg-muted/30 rounded-lg">
                               <p className="text-sm font-medium mb-2">Anotaciones del punto:</p>
                               <div className="space-y-3">
@@ -1404,6 +1456,83 @@ export default function MeetingDetailPage() {
                               </div>
                             </div>
                           )}
+
+                          {/* Vista de solo lectura para miembros de junta */}
+                          {role === 'board-member' && isMeetingStarted() && (
+                            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Eye className="h-4 w-4 text-blue-600" />
+                                <span className="text-sm font-medium text-blue-900">Información del punto</span>
+                                <Badge variant="outline" className="text-xs">Solo lectura</Badge>
+                              </div>
+                              
+                              {/* Mostrar anotaciones existentes si las hay */}
+                              {punto.anotaciones && (
+                                <div className="mb-3">
+                                  <p className="text-xs font-medium text-blue-700 mb-2">Anotaciones registradas:</p>
+                                  <div className="bg-white p-3 rounded border text-sm text-gray-700 whitespace-pre-wrap">
+                                    {punto.anotaciones}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Mostrar información de votación si es un punto de aprobación */}
+                              {punto.tipo === 'Aprobacion' && (punto.votosAFavor !== undefined || punto.votosEnContra !== undefined) && (
+                                <div className="mb-3">
+                                  <p className="text-xs font-medium text-blue-700 mb-2">Resultado de votación:</p>
+                                  <div className="bg-white p-3 rounded border">
+                                    <div className="flex items-center justify-between text-sm">
+                                      <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                          <ThumbsUp className="h-4 w-4 text-green-600" />
+                                          <span className="text-green-700 font-medium">A favor: {punto.votosAFavor || 0}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <ThumbsDown className="h-4 w-4 text-red-600" />
+                                          <span className="text-red-700 font-medium">En contra: {punto.votosEnContra || 0}</span>
+                                        </div>
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        Total: {(punto.votosAFavor || 0) + (punto.votosEnContra || 0)} / {meeting?.convocados?.length || 0}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Estado del punto */}
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
+                                  {punto.anotaciones ? (
+                                    <>
+                                      <div className="w-2 h-2 bg-green-500 rounded-full" />
+                                      <span className="text-green-700 font-medium">Punto completado</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                                      <span className="text-yellow-700 font-medium">
+                                        {activePointId === punto._id ? 'En discusión' : 'Pendiente'}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                                <div className="text-blue-600">
+                                  Duración: {formatDuracion(punto.duracion)}
+                                </div>
+                              </div>
+                              
+                              {/* Información adicional para el contexto */}
+                              {!punto.anotaciones && (
+                                <div className="mt-2 text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                                  <div className="flex items-center gap-1">
+                                    <Shield className="h-3 w-3" />
+                                    <span>El administrador de la reunión está gestionando este punto.</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1444,8 +1573,8 @@ export default function MeetingDetailPage() {
                 </div>
               </CardContent>            </Card>          )}
 
-          {/* Botón Terminar Reunión - Solo visible si la reunión ha iniciado pero no ha terminado */}
-          {isMeetingStarted() && !isMeetingEnded() && (
+          {/* Botón Terminar Reunión - Solo visible si la reunión ha iniciado pero no ha terminado Y el usuario es admin */}
+          {permissions.canEdit && isMeetingStarted() && !isMeetingEnded() && (
             <div className="flex justify-center">
               <Button
                 variant="destructive"

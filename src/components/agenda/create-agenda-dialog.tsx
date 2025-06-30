@@ -99,6 +99,7 @@ export function CreateAgendaDialog({
     }
   };  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dataLoaded, setDataLoaded] = useState(false); // Estado para controlar si ya se cargaron los datos
   
   // Estados para rastrear cambios en modo edición
   const [originalPuntos, setOriginalPuntos] = useState<PuntoFormData[]>([]);
@@ -109,18 +110,20 @@ export function CreateAgendaDialog({
   });
   const [puntos, setPuntos] = useState<PuntoFormData[]>([
     {
-      id: "1",
-      titulo: "Presentación inicial",
+      id: `initial-${Date.now()}`,
+      titulo: "",
       tipo: TipoPunto.Informativo,
-      duracion: 30,
+      duracion: 15,
       expositor: "",
+      detalles: "",
+      anotaciones: "",
       archivos: [],
     }
   ]);
 
   const [editingPunto, setEditingPunto] = useState<string | null>(null);  // Función para cargar datos de la agenda en modo edición
   const loadAgendaData = useCallback(async () => {
-    if (!editMode || !agendaToEdit) return;
+    if (!editMode || !agendaToEdit || dataLoaded) return;
 
     try {
       setIsLoading(true);
@@ -134,28 +137,33 @@ export function CreateAgendaDialog({
       // Cargar puntos de la agenda
       if (agendaToEdit._id) {
         const puntosData = await getPuntosByAgenda(agendaToEdit._id);
+        console.log('Puntos cargados desde el backend:', puntosData);
+        
         if (puntosData && puntosData.length > 0) {
-          const puntosFormData = puntosData.map((punto, index) => ({
-            id: punto._id || index.toString(),
-            titulo: punto.titulo,
+          const puntosFormData = puntosData.map((punto) => ({
+            id: punto._id || `temp-${Date.now()}-${Math.random()}`,
+            titulo: punto.titulo || "",
             tipo: punto.tipo as TipoPunto,
-            duracion: punto.duracion,
-            expositor: punto.expositor,
+            duracion: punto.duracion || 15,
+            expositor: punto.expositor || "",
             detalles: punto.detalles || "",
             anotaciones: punto.anotaciones || "",
             archivos: punto.archivos || [],
           }));
           setPuntos(puntosFormData);
           setOriginalPuntos(JSON.parse(JSON.stringify(puntosFormData))); // Copia profunda
+          console.log('Puntos procesados para el formulario:', puntosFormData);
         } else {
-          // Si no hay puntos, mantener uno por defecto
+          // Si no hay puntos, crear uno vacío para empezar
           const defaultPuntos = [
             {
-              id: "new-1",
-              titulo: "Presentación inicial",
+              id: `new-${Date.now()}`,
+              titulo: "",
               tipo: TipoPunto.Informativo,
-              duracion: 30,
+              duracion: 15,
               expositor: "",
+              detalles: "",
+              anotaciones: "",
               archivos: [],
             }
           ];
@@ -163,26 +171,65 @@ export function CreateAgendaDialog({
           setOriginalPuntos([]);
         }
       }
+      
+      setDataLoaded(true); // Marcar que los datos fueron cargados
     } catch (error) {
       console.error('Error loading agenda data:', error);
-      setError('Error al cargar los datos de la agenda');    } finally {
+      setError('Error al cargar los datos de la agenda');
+    } finally {
       setIsLoading(false);
     }
-  }, [editMode, agendaToEdit, getPuntosByAgenda]);
+  }, [editMode, agendaToEdit?._id, agendaToEdit?.nombre, getPuntosByAgenda, dataLoaded]);
   
   // useEffect para cargar datos cuando se abre en modo edición
   useEffect(() => {
-    if (open && editMode) {
+    if (open && editMode && agendaToEdit?._id && !dataLoaded) {
       loadAgendaData();
     }
-  }, [open, editMode, agendaToEdit, loadAgendaData]);
+  }, [open, editMode, agendaToEdit?._id, dataLoaded]); // Remover loadAgendaData de las dependencias
+
+  // useEffect para resetear estado cuando se cierra el diálogo
+  useEffect(() => {
+    if (!open) {
+      // Resetear todos los estados cuando se cierra el diálogo
+      setDataLoaded(false);
+      setError(null);
+      setEditingPunto(null);
+      
+      if (!editMode) {
+        // Solo resetear datos del formulario si no está en modo edición
+        setAgendaData({ nombre: "" });
+        setPuntos([
+          {
+            id: `initial-${Date.now()}`,
+            titulo: "",
+            tipo: TipoPunto.Informativo,
+            duracion: 15,
+            expositor: "",
+            detalles: "",
+            anotaciones: "",
+            archivos: [],
+          }
+        ]);
+      }
+      
+      // En modo edición, resetear también los estados de seguimiento
+      if (editMode) {
+        setOriginalPuntos([]);
+        setDeletedPuntoIds([]);
+      }
+    }
+  }, [open, editMode]);
+
   const addPunto = () => {
     const newPunto: PuntoFormData = {
-      id: editMode ? `new-${Date.now()}` : Date.now().toString(),
+      id: `new-${Date.now()}-${Math.random()}`, // ID único más robusto
       titulo: "",
       tipo: TipoPunto.Informativo,
       duracion: 15,
       expositor: "",
+      detalles: "",
+      anotaciones: "",
       archivos: [],
     };
     setPuntos([...puntos, newPunto]);
@@ -344,9 +391,15 @@ export function CreateAgendaDialog({
     }
 
     // Validar que todos los puntos tengan título y expositor
-    const puntosIncompletos = puntos.filter(p => !p.titulo.trim() || !p.expositor.trim());
+    const puntosIncompletos = puntos.filter(p => !p.titulo.trim());
     if (puntosIncompletos.length > 0) {
-      setError("Todos los puntos deben tener título y expositor");
+      setError("Todos los puntos deben tener un título");
+      return;
+    }
+
+    const puntosSinExpositor = puntos.filter(p => !p.expositor.trim());
+    if (puntosSinExpositor.length > 0) {
+      setError("Todos los puntos deben tener un expositor asignado");
       return;
     }
 
@@ -403,11 +456,13 @@ export function CreateAgendaDialog({
     setAgendaData({ nombre: "" });        
     setPuntos([
       {
-        id: "1",
-        titulo: "Presentación inicial",
+        id: `new-${Date.now()}`,
+        titulo: "",
         tipo: TipoPunto.Informativo,
-        duracion: 30,
+        duracion: 15,
         expositor: "",
+        detalles: "",
+        anotaciones: "",
         archivos: [],
       }
     ]);

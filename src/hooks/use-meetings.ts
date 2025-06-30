@@ -184,6 +184,8 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
         archivos: archivosFilenames
       };
 
+      console.log("📡 Enviando petición a:", API_ENDPOINTS.CREATE);
+      console.log("📡 Headers:", { 'Content-Type': 'application/json' });
       console.log("📡 Creando reunión con datos:", reunionDataWithFiles);
       
       const response = await fetch(API_ENDPOINTS.CREATE, {
@@ -194,6 +196,9 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
         body: JSON.stringify(reunionDataWithFiles),
       });
 
+      console.log("📡 Response status:", response.status);
+      console.log("📡 Response ok:", response.ok);
+
       if (response.ok) {
         const result: ReunionData = await response.json();
         console.log("✅ Reunión creada exitosamente:", result);
@@ -202,12 +207,22 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
         setMeetings(prev => [...prev, result]);
         return result;
       } else {
-        const errorData = await response.json();
-        console.log("❌ Error del servidor:", errorData);
-        setError(errorData.message || ERROR_MESSAGES.CREATE_ERROR);
+        const errorText = await response.text();
+        console.log("❌ Error del servidor (texto):", errorText);
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          console.log("❌ Error del servidor (JSON):", errorData);
+          setError(errorData.message || ERROR_MESSAGES.CREATE_ERROR);
+        } catch {
+          console.log("❌ Error del servidor (no JSON):", errorText);
+          setError(`Error del servidor: ${response.status} - ${errorText || ERROR_MESSAGES.CREATE_ERROR}`);
+        }
         return null;
-      }    } catch (error) {
-      console.error('❌ Error en createMeeting hook:', error);      setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al crear la reunión`));
+      }
+    } catch (error) {
+      console.error('❌ Error en createMeeting hook:', error);
+      setError(handleApiError(error, `${ERROR_MESSAGES.CONNECTION_ERROR} al crear la reunión`));
       return null;
     }
   }, [handleApiError]);const updateMeeting = useCallback(async (id: string, data: Partial<CreateReunionData>): Promise<ReunionData | null> => {

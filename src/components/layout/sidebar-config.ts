@@ -37,20 +37,5 @@ export const defaultSidebarConfig: SidebarConfig = {
         },
       ],
     },
-    {
-      title: "Sistema",
-      items: [
-    //     {
-    //       title: "Configuración",
-    //       icon: Settings,
-    //       href: "/configuracion",
-    //     },
-        {
-          title: "Notificaciones",
-          icon: BellDotIcon,
-          href: "/notificaciones",
-        },
-      ],
-    },
   ],
 };

@@ -3,13 +3,17 @@
 import { useState } from 'react';
 import { AppLayout } from "@/components/layout";
 import { ProtectedRoute } from "@/components/auth";
+import { AgendaViewDialog } from '@/components/agenda/agenda-view-dialog';
+import { CreateAgendaDialog } from '@/components/agenda/create-agenda-dialog';
 import { useAgendas } from '@/hooks/use-agendas';
 import { useUserOrganization } from '@/hooks/use-user-organization';
+import { useOrganizationMembers } from '@/hooks/use-organization-members';
+import { useUserPermissions, useUserRole } from '@/hooks/use-user-permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { 
   Dialog, 
   DialogContent, 
@@ -18,7 +22,8 @@ import {
   DialogHeader, 
   DialogTitle 
 } from '@/components/ui/dialog';
-import { Loader2, Edit, Trash2 } from "lucide-react";
+import { Loader2, Edit, Trash2, Eye, Plus } from "lucide-react";
+import { Label } from '@/components/ui/label';
 
 interface AgendaResponse {
   _id: string;
@@ -34,9 +39,12 @@ interface AgendaCardProps {
   agenda: AgendaResponse;
   onEdit: (agenda: AgendaResponse) => void;
   onDelete: (agenda: AgendaResponse) => void;
+  onView: (agenda: AgendaResponse) => void;
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
-function AgendaCard({ agenda, onEdit, onDelete }: AgendaCardProps) {
+function AgendaCard({ agenda, onEdit, onDelete, onView, canEdit, canDelete }: AgendaCardProps) {
   const formatDate = (date: Date | undefined) => {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('es-ES', {
@@ -67,24 +75,42 @@ function AgendaCard({ agenda, onEdit, onDelete }: AgendaCardProps) {
       </CardHeader>
       <CardContent className="pt-0">
         <div className="flex gap-2">
+          {/* Botón Ver - siempre visible */}
           <Button
             size="sm"
             variant="outline"
-            onClick={() => onEdit(agenda)}
+            onClick={() => onView(agenda)}
             className="flex-1"
           >
-            <Edit className="w-4 h-4 mr-1" />
-            Editar
+            <Eye className="w-4 h-4 mr-1" />
+            Ver
           </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => onDelete(agenda)}
-            className="flex-1"
-          >
-            <Trash2 className="w-4 h-4 mr-1" />
-            Eliminar
-          </Button>
+          
+          {/* Botón Editar - solo para administradores */}
+          {canEdit && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onEdit(agenda)}
+              className="flex-1"
+            >
+              <Edit className="w-4 h-4 mr-1" />
+              Editar
+            </Button>
+          )}
+          
+          {/* Botón Eliminar - solo para administradores */}
+          {canDelete && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => onDelete(agenda)}
+              className="flex-1"
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Eliminar
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -116,36 +142,104 @@ function AgendaListSkeleton() {
 }
 
 export default function AgendasPage() {
-  const { organization, isLoading: orgLoading, error: orgError } = useUserOrganization();const { 
+  const { organization, isLoading: orgLoading, error: orgError } = useUserOrganization();
+  const { members, isLoading: membersLoading } = useOrganizationMembers(organization?.id);
+  const { 
     agendas, 
     isLoading: agendasLoading, 
     error, 
     deleteAgenda, 
     updateAgenda,
+    createAgenda,
+    getAgenda,
     refetch 
   } = useAgendas(organization?.id);
 
+  // Usar el sistema de permisos basado en Visitor Pattern
+  const permissions = useUserPermissions();
+  const { role, displayName } = useUserRole();
+
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Estados para modal de edición
-  const [editingAgenda, setEditingAgenda] = useState<AgendaResponse | null>(null);
-  const [editAgendaName, setEditAgendaName] = useState('');
+  // Estados para los nuevos diálogos
+  const [viewingAgenda, setViewingAgenda] = useState<any>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isViewLoading, setIsViewLoading] = useState(false);
+  
+  const [editingAgenda, setEditingAgenda] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [editMode, setEditMode] = useState<'create' | 'edit'>('edit');
+  const [isEditLoading, setIsEditLoading] = useState(false);
   
   // Estados para modal de confirmación de eliminación
   const [deletingAgenda, setDeletingAgenda] = useState<AgendaResponse | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
   // Combinamos los estados de carga
   const isLoadingData = orgLoading || (organization?.id && agendasLoading);
+
+  // Convertir miembros a formato esperado por CreateAgendaDialog
+  const convocados = members.map(member => ({
+    nombre: member.nombre,
+    correo: member.correo,
+    esMiembro: member.esMiembro
+  }));
 
   const filteredAgendas = agendas.filter(agenda =>
     agenda.nombre.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  const handleEdit = (agenda: AgendaResponse) => {
-    setEditingAgenda(agenda);
-    setEditAgendaName(agenda.nombre);
+  
+  const handleView = async (agenda: AgendaResponse) => {
+    try {
+      setIsViewLoading(true);
+      setIsViewDialogOpen(true);
+      
+      // Obtener la agenda completa con datos poblados
+      const agendaCompleta = await getAgenda(agenda._id, true);
+      if (agendaCompleta) {
+        setViewingAgenda(agendaCompleta);
+      }
+    } catch (error) {
+      console.error('Error al cargar agenda:', error);
+    } finally {
+      setIsViewLoading(false);
+    }
+  };
+
+  const handleEditFromView = async () => {
+    if (viewingAgenda) {
+      // Cerrar el diálogo de vista
+      setIsViewDialogOpen(false);
+      
+      // Abrir el diálogo de edición con la agenda ya cargada
+      setEditMode('edit');
+      setEditingAgenda(viewingAgenda);
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleEdit = async (agenda: AgendaResponse) => {
+    try {
+      setIsEditLoading(true);
+      setEditMode('edit');
+      setIsEditDialogOpen(true);
+      
+      // Obtener la agenda completa para edición
+      const agendaCompleta = await getAgenda(agenda._id, true);
+      if (agendaCompleta) {
+        setEditingAgenda(agendaCompleta);
+      }
+    } catch (error) {
+      console.error('Error al cargar agenda para edición:', error);
+    } finally {
+      setIsEditLoading(false);
+    }
+  };
+
+  const handleCreate = () => {
+    setEditMode('create');
+    setEditingAgenda(null);
     setIsEditDialogOpen(true);
   };
 
@@ -154,22 +248,14 @@ export default function AgendasPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleSaveEdit = async () => {
-    if (!editingAgenda || !editAgendaName.trim()) return;
+  const handleAgendaCreated = async (newAgenda: any) => {
+    // Refrescar la lista de agendas
+    await refetch();
+  };
 
-    try {
-      setIsSaving(true);
-      const success = await updateAgenda(editingAgenda._id, { nombre: editAgendaName });
-      if (success) {
-        setIsEditDialogOpen(false);
-        setEditingAgenda(null);
-        setEditAgendaName('');
-      }
-    } catch (error) {
-      console.error('Error al actualizar agenda:', error);
-    } finally {
-      setIsSaving(false);
-    }
+  const handleAgendaUpdated = async (updatedAgenda: any) => {
+    // Refrescar la lista de agendas
+    await refetch();
   };
 
   const handleConfirmDelete = async () => {
@@ -189,15 +275,14 @@ export default function AgendasPage() {
     }
   };
 
-  const handleCancelEdit = () => {
-    setIsEditDialogOpen(false);
-    setEditingAgenda(null);
-    setEditAgendaName('');
-  };
-
   const handleCancelDelete = () => {
     setIsDeleteDialogOpen(false);
     setDeletingAgenda(null);
+  };
+
+  const handleCloseViewDialog = () => {
+    setIsViewDialogOpen(false);
+    setViewingAgenda(null);
   };
 
   // Estado de carga inicial
@@ -267,13 +352,31 @@ export default function AgendasPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                Mis Agendas
-              </h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                  Mis Agendas
+                </h1>
+                <Badge variant={role === 'admin' ? 'default' : 'secondary'}>
+                  {displayName}
+                </Badge>
+              </div>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
                 Organización: {organization.nombre}
               </p>
+              {role === 'board-member' && (
+                <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                  👁️ Modo de visualización - Los cambios los realiza el administrador
+                </p>
+              )}
             </div>
+            
+            {/* Botón Crear Agenda - solo para administradores */}
+            {permissions.canCreate && (
+              <Button onClick={handleCreate} className="shrink-0">
+                <Plus className="w-4 h-4 mr-2" />
+                Crear Agenda
+              </Button>
+            )}
           </div>
 
           {/* Search Bar */}
@@ -313,90 +416,35 @@ export default function AgendasPage() {
                   key={agenda._id}
                   agenda={agenda}
                   onEdit={handleEdit}
-                  onDelete={handleDelete}                />
+                  onDelete={handleDelete}
+                  onView={handleView}
+                  canEdit={permissions.canEdit}
+                  canDelete={permissions.canDelete}
+                />
               ))}
             </div>
           )}
         </div>
 
-        {/* Modal de Edición */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Editar Agenda</DialogTitle>
-              <DialogDescription>
-                Modifica el nombre de la agenda y guarda los cambios.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-agenda-name">Nombre de la Agenda</Label>
-                <Input
-                  id="edit-agenda-name"
-                  value={editAgendaName}
-                  onChange={(e) => setEditAgendaName(e.target.value)}
-                  placeholder="Ingresa el nombre de la agenda"
-                  className="text-base"
-                />
-                {editAgendaName.trim() === '' && (
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    El nombre de la agenda es obligatorio
-                  </p>
-                )}
-              </div>
-              {editingAgenda && (
-                <div className="bg-gray-50 dark:bg-gray-900/20 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    Información de la Agenda
-                  </h4>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <div className="flex justify-between">
-                      <span>Puntos registrados:</span>
-                      <span>{Array.isArray(editingAgenda.puntos) ? editingAgenda.puntos.length : 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Reuniones asociadas:</span>
-                      <span>{Array.isArray(editingAgenda.reuniones) ? editingAgenda.reuniones.length : 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Última actualización:</span>
-                      <span>
-                        {editingAgenda.updatedAt 
-                          ? new Date(editingAgenda.updatedAt).toLocaleDateString('es-ES')
-                          : 'N/A'
-                        }
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancelEdit}
-                disabled={isSaving}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                onClick={handleSaveEdit}
-                disabled={isSaving || !editAgendaName.trim() || editAgendaName === editingAgenda?.nombre}
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  'Guardar Cambios'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Nuevos Diálogos */}
+        <AgendaViewDialog
+          isOpen={isViewDialogOpen}
+          onClose={handleCloseViewDialog}
+          agenda={viewingAgenda}
+          isLoading={isViewLoading}
+          onEdit={permissions.canEdit ? handleEditFromView : undefined}
+        />
+
+        <CreateAgendaDialog
+          organizacionId={organization?.id || ''}
+          onAgendaCreated={handleAgendaCreated}
+          onAgendaUpdated={handleAgendaUpdated}
+          editMode={editMode === 'edit'}
+          agendaToEdit={editingAgenda}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          convocados={convocados}
+        />
 
         {/* Modal de Confirmación de Eliminación */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
