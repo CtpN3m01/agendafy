@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NotificacionModel, INotificacion } from '@/models/Notificacion';
 import { 
   CrearNotificacionDTO, 

@@ -2,7 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { PersonaDAOImpl } from '@/dao/PersonaDAO';
 import { CrearPersonaDTO } from '@/types/PersonaDTO';
 import { HashUtil } from '@/lib/hash';
-import { AuthUtil } from '@/lib/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -58,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Preparar respuesta sin contraseña
     const respuesta = {
-      id: (nuevaPersona as any)._id.toString(),
+      id: (nuevaPersona as typeof nuevaPersona & { _id: { toString(): string } })._id.toString(),
       nombre: nuevaPersona.nombre,
       apellidos: nuevaPersona.apellidos,
       correo: nuevaPersona.correo,

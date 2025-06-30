@@ -16,7 +16,6 @@ interface BoardMember {
   apellidos: string;
   correo: string;
   rol: string;
-  contrasena?: string; // Opcional para el establecimiento de contraseña
 }
 
 interface BoardMemberFormProps {
@@ -45,9 +44,7 @@ export function BoardMemberForm({
     nombre: '',
     apellidos: '',
     correo: '',
-    rol: 'Vocal',
-    contrasena: '',
-    confirmarContrasena: ''
+    rol: 'Vocal'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,18 +55,14 @@ export function BoardMemberForm({
           nombre: member.nombre || '',
           apellidos: member.apellidos || '',
           correo: member.correo || '',
-          rol: member.rol || 'Vocal',
-          contrasena: '', // No mostrar contraseña existente
-          confirmarContrasena: ''
+          rol: member.rol || 'Vocal'
         });
       } else {        
         setFormData({
           nombre: '',
           apellidos: '',
           correo: '',
-          rol: 'Vocal',
-          contrasena: '',
-          confirmarContrasena: ''
+          rol: 'Vocal'
         });
       }
       setError(null);
@@ -81,31 +74,8 @@ export function BoardMemberForm({
     setIsSubmitting(true);
     setError(null);
 
-    // Validaciones específicas para crear nuevos miembros
-    if (!isEditing) {
-      if (!formData.contrasena) {
-        setError('La contraseña es requerida para nuevos miembros');
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (formData.contrasena.length < 6) {
-        setError('La contraseña debe tener al menos 6 caracteres');
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (formData.contrasena !== formData.confirmarContrasena) {
-        setError('Las contraseñas no coinciden');
-        setIsSubmitting(false);
-        return;
-      }
-    }
-
     try {
-      // Crear objeto sin confirmarContrasena para enviar al backend
-      const { confirmarContrasena, ...memberData } = formData;
-      const success = await onSubmit(memberData);
+      const success = await onSubmit(formData);
       if (success) {
         onClose();
       }
@@ -133,7 +103,7 @@ export function BoardMemberForm({
           <DialogDescription>
             {isEditing 
               ? 'Modifica la información del miembro de la junta directiva.'
-              : 'Agrega un nuevo miembro a la junta directiva.'
+              : 'Agrega un nuevo miembro a la junta directiva. Se generará una contraseña temporal que será enviada por correo electrónico.'
             }
           </DialogDescription>
         </DialogHeader>
@@ -202,36 +172,6 @@ export function BoardMemberForm({
               </SelectContent>
             </Select>
           </div>
-
-          {!isEditing && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="contrasena">Contraseña *</Label>
-                <Input
-                  id="contrasena"
-                  type="password"
-                  value={formData.contrasena}
-                  onChange={(e) => handleInputChange('contrasena', e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                  required={!isEditing}
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmarContrasena">Confirmar Contraseña *</Label>
-                <Input
-                  id="confirmarContrasena"
-                  type="password"
-                  value={formData.confirmarContrasena}
-                  onChange={(e) => handleInputChange('confirmarContrasena', e.target.value)}
-                  placeholder="Confirma la contraseña"
-                  required={!isEditing}
-                  disabled={isSubmitting}
-                />
-              </div>
-            </>
-          )}
 
           <DialogFooter>
             <Button

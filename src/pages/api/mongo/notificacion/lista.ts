@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from 'next';
 import { notificacionService } from '@/services/NotificacionService';
 import { TipoNotificacion } from '@/types/NotificacionDTO';

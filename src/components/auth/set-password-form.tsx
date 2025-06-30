@@ -40,7 +40,7 @@ export function SetPasswordForm({ email, onSuccess, onCancel }: SetPasswordFormP
     }
 
     try {
-      const response = await fetch('/api/auth/persona/set-password', {
+      const response = await fetch('/api/auth/set-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +58,7 @@ export function SetPasswordForm({ email, onSuccess, onCancel }: SetPasswordFormP
       } else {
         setErrors({ general: data.message });
       }
-    } catch (error) {
+    } catch {
       setErrors({ general: "Error de conexión" });
     } finally {
       setIsLoading(false);

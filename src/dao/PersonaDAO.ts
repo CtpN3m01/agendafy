@@ -1,5 +1,5 @@
 import { PersonaModel, IPersona } from '@/models/Persona';
-import { CrearPersonaDTO, PersonaResponseDTO } from '@/types/PersonaDTO';
+import { CrearPersonaDTO } from '@/types/PersonaDTO';
 import { connectToDatabase } from '@/lib/mongodb';
 
 /* 

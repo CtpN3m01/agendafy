@@ -21,7 +21,7 @@ export default function LoginPage() {
 
   const handleLogin = async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/unified-login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,16 +60,12 @@ export default function LoginPage() {
     router.push('/auth/register');
   };
 
-  const handlePersonaLogin = () => {
-    router.push('/auth/persona/login');
-  };
   return (
     <AuthLayout>
       <LoginForm 
         onLogin={handleLogin} 
         onForgotPassword={handleForgotPassword}
         onRegister={handleRegister}
-        onPersonaLogin={handlePersonaLogin}
       />
     </AuthLayout>
   );
