@@ -31,7 +31,6 @@ export interface INotificacionDAO {
     pagina: number;
     totalPaginas: number;
   }>;
-  deleteMany(destinatario: string): Promise<number>;
 }
 
 /**
@@ -303,14 +302,6 @@ export class NotificacionDAOImpl implements INotificacionDAO {
       totalPaginas
     };
   }
-
-  async deleteMany(destinatario: string): Promise<number> {
-    await this.ensureConnection();
-    
-    const result = await NotificacionModel.deleteMany({ destinatario }).exec();
-    return result.deletedCount || 0;
-  }
-
 }
 
 // Instancia singleton del DAO

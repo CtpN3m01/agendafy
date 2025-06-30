@@ -29,7 +29,6 @@ export default function NotificacionesPage() {
     marcarComoLeida,
     marcarVariasComoLeidas,
     eliminarNotificacion,
-    borrarBuzon,
     refrescarNotificaciones
   } = useNotificaciones(user?.correo);
 
@@ -37,13 +36,11 @@ export default function NotificacionesPage() {
     handleMarcarLeida,
     handleMarcarVariasLeidas,
     handleEliminar,
-    handleVaciarBuzon,
     handleRefrescar
   } = useNotificacionActions({
     onMarcarLeida: marcarComoLeida,
     onMarcarVariasLeidas: marcarVariasComoLeidas,
     onEliminar: eliminarNotificacion,
-    onVaciarBuzon: borrarBuzon,
     onRefrescar: refrescarNotificaciones
   });
 
@@ -123,11 +120,9 @@ export default function NotificacionesPage() {
             notificaciones={notificaciones}
             conteoNoLeidas={conteoNoLeidas}
             isLoading={isLoading}
-            destinatario={user.correo}
             onMarcarLeida={handleMarcarLeida}
             onMarcarVariasLeidas={handleMarcarVariasLeidas}
             onEliminar={handleEliminar}
-            onVaciarBuzon={handleVaciarBuzon}
             onRefrescar={handleRefrescar}
             onNotificacionClick={handleNotificacionClick}
           />

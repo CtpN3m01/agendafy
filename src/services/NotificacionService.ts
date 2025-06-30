@@ -224,18 +224,6 @@ export class NotificacionService {
   }
 
   /**
-   * Eliminar todas las notificaciones de un destinatario
-   */
-  async deleteMany(destinatario: string): Promise<number> {
-    try {
-      const deletedCount = await this.notificacionDAO.deleteMany(destinatario);
-      return deletedCount;
-    } catch (error) {
-      throw new Error(`Error al eliminar notificaciones: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-    }
-  }
-
-  /**
    * Obtiene notificaciones por tipo
    */
   async obtenerNotificacionesPorTipo(

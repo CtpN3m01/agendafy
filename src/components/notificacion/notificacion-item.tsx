@@ -122,15 +122,6 @@ export const NotificacionItem: React.FC<NotificacionItemProps> = ({
               {!notificacion.leida && (
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
               )}
-              {/* Botón borrar */}
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={handleEliminar}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 mt-1"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </div>
           </div>
           
