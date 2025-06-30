@@ -55,7 +55,7 @@ export function useUserRole(): { role: 'admin' | 'board-member' | 'unknown', dis
     switch (user.type) {
       case 'usuario':
         return { role: 'admin', displayName: 'Administrador' };
-      case 'persona':
+      case 'miembro':
         return { role: 'board-member', displayName: `Miembro de Junta${user.rol ? ` - ${user.rol}` : ''}` };
       default:
         return { role: 'unknown', displayName: 'Usuario' };

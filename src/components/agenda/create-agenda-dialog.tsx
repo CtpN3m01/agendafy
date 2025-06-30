@@ -1,7 +1,7 @@
 // src/components/agenda/create-agenda-dialog.tsx
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -205,7 +205,7 @@ export function CreateAgendaDialog({
         loadingRef.current = false; // Limpiar la bandera de carga
       };
     }
-  }, [open, editMode, agendaToEdit?._id, dataLoaded]); // Remover dependencias que cambian constantemente
+  }, [open, editMode, agendaToEdit?._id, agendaToEdit?.nombre, dataLoaded, getPuntosByAgenda]); // Agregar dependencias faltantes
 
   // useEffect para resetear estado cuando se cierra el diálogo
   useEffect(() => {

@@ -2,11 +2,30 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { UsuarioDAOImpl } from '@/dao/UsuarioDAO';
 import { PersonaAuthAdapter } from '@/models/PersonaAuthAdapter';
 import { IUsuario } from '@/models/Usuario';
+import { IPersona } from '@/models/Persona';
 import jwt from 'jsonwebtoken';
 import { JWT_CONFIG } from '@/lib/jwt-config';
 
 const usuarioDAO = new UsuarioDAOImpl();
 const personaAdapter = new PersonaAuthAdapter();
+
+// Interface para documento de MongoDB con _id
+interface IUsuarioDocument extends IUsuario {
+  _id: {
+    toString(): string;
+  };
+}
+
+// Interface para datos de actualización del perfil
+interface UpdateProfileData {
+  nombre?: string;
+  apellidos?: string;
+  correo?: string;
+  telefono?: string;
+  posicion?: string;
+  departamento?: string;
+  biografia?: string;
+}
 
 // Función auxiliar para obtener el usuario del token
 async function getUserFromToken(req: NextApiRequest) {
@@ -57,12 +76,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (decoded?.type === 'miembro') {
         const userProfile = {
-          id: (usuario as any)._id.toString(),
+          id: (usuario as IUsuarioDocument)._id.toString(),
           name: `${usuario.nombre} ${usuario.apellidos}`,
           email: usuario.correo,
           avatar: "",
           phone: "",
-          position: (usuario as any).rol || "",
+          position: (usuario as IPersona).rol || "",
           department: "",
           bio: "",
           createdAt: usuario.createdAt,
@@ -73,7 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Usuario administrador (no miembro)
         const usuarioAdmin = usuario as IUsuario;
         const userProfile = {
-          id: (usuarioAdmin as any)._id.toString(),
+          id: (usuarioAdmin as IUsuarioDocument)._id.toString(),
           name: usuarioAdmin.nombre || "",
           email: usuarioAdmin.correo,
           avatar: usuarioAdmin.avatar,
@@ -106,10 +125,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(404).json({ error: 'Usuario no encontrado' });
       }
 
-      console.log('Usuario encontrado:', { id: (usuario as any)._id, nombre: usuario.nombre });
+      console.log('Usuario encontrado:', { id: (usuario as IUsuarioDocument)._id.toString(), nombre: usuario.nombre });
 
       const { name, email, phone, position, department, bio } = req.body;
-      const updateData: any = {};
+      const updateData: UpdateProfileData = {};
 
       // Si se actualiza el nombre, separar en nombre y apellidos
       if (name && name !== `${usuario.nombre} ${usuario.apellidos}`) {
@@ -132,9 +151,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let usuarioActualizado;
       if (decoded?.type === 'miembro') {
         // Si es miembro, deberías tener un método para actualizar persona
-        usuarioActualizado = await personaAdapter.actualizarPerfil((usuario as any)._id.toString(), updateData);
+        usuarioActualizado = await personaAdapter.actualizarPerfil((usuario as IUsuarioDocument)._id.toString(), updateData);
       } else {
-        usuarioActualizado = await usuarioDAO.actualizarPerfil((usuario as any)._id.toString(), updateData);
+        usuarioActualizado = await usuarioDAO.actualizarPerfil((usuario as IUsuarioDocument)._id.toString(), updateData);
       }
 
       console.log('Usuario actualizado:', usuarioActualizado ? 'exitoso' : 'falló');
@@ -147,12 +166,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let userProfileActualizado;
       if (decoded?.type === 'miembro') {
         userProfileActualizado = {
-          id: (usuarioActualizado as any)._id.toString(),
+          id: (usuarioActualizado as IUsuarioDocument)._id.toString(),
           name: `${usuarioActualizado.nombre} ${usuarioActualizado.apellidos}`,
           email: usuarioActualizado.correo,
           avatar: '',
           phone: '',
-          position: (usuarioActualizado as any).rol || '',
+          position: (usuarioActualizado as IPersona).rol || '',
           department: '',
           bio: '',
           createdAt: usuarioActualizado.createdAt,
@@ -161,7 +180,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } else {
         const usuarioAdminAct = usuarioActualizado as IUsuario;
         userProfileActualizado = {
-          id: (usuarioAdminAct as any)._id.toString(),
+          id: (usuarioAdminAct as IUsuarioDocument)._id.toString(),
           name: `${usuarioAdminAct.nombre} ${usuarioAdminAct.apellidos}`,
           email: usuarioAdminAct.correo,
           avatar: usuarioAdminAct.avatar,

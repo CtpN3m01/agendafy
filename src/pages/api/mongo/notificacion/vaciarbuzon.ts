@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       deletedCount,
       message: `Se eliminaron ${deletedCount} notificaciones del buzón.`
     });
-  } catch (error) {
+  } catch {
     return res.status(500).json({ success: false, message: 'Error al vaciar el buzón de notificaciones' });
   }
 }

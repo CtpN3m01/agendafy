@@ -75,7 +75,7 @@ export class SidebarConfigVisitor implements SidebarVisitor {
   }
 
   /**
-   * Configuración para miembros de junta (usuarios tipo 'persona')
+   * Configuración para miembros de junta (usuarios tipo 'miembro')
    * - Acceso principalmente de visualización
    * - Pueden participar en reuniones
    * - Reciben notificaciones automáticas
@@ -148,11 +148,11 @@ export class SidebarContext {
   /**
    * Genera la configuración del sidebar según el tipo de usuario
    */
-  generateConfig(userType: 'usuario' | 'persona'): SidebarConfig {
+  generateConfig(userType: 'usuario' | 'miembro'): SidebarConfig {
     switch (userType) {
       case 'usuario':
         return this.visitor.visitAdmin();
-      case 'persona':
+      case 'miembro':
         return this.visitor.visitBoardMember();
       default:
         // Configuración por defecto (usuario administrador)
@@ -164,7 +164,7 @@ export class SidebarContext {
 /**
  * Factory para crear la configuración del sidebar
  */
-export function createSidebarConfig(userType?: 'usuario' | 'persona'): SidebarConfig {
+export function createSidebarConfig(userType?: 'usuario' | 'miembro'): SidebarConfig {
   // Crear instancias una sola vez para evitar re-renders
   const visitor = new SidebarConfigVisitor();
   const context = new SidebarContext(visitor);

@@ -17,9 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     const puntos = await puntoService.obtenerPuntosPorAgenda(agendaId);
     return res.status(200).json(puntos);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error al obtener los puntos por agenda:', error);
-    return res.status(500).json({ message: error.message || 'Error interno del servidor' });
+    return res.status(500).json({ message: (error as Error).message || 'Error interno del servidor' });
   }
 }

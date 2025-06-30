@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { ReunionService } from '@/services/ReunionService';
 import { reunionNotificacionService } from '@/services/ReunionNotificacionService';
 import { AgendaService } from '@/services/AgendaService';
-import { ConvocadoDTO } from '@/types/ReunionDTO';
+import { ConvocadoDTO, CrearReunionDTO } from '@/types/ReunionDTO';
 
 // Tipado explícito para los parámetros y retorno
 interface GenerarAsignacion {
@@ -17,32 +17,44 @@ interface GenerarAsignacion {
   };
 }
 
+// Interface para un punto de agenda
+interface PuntoAgenda {
+  titulo: string;
+  tipo: string;
+  expositor?: string;
+}
+
+// Interface para agenda con puntos
+interface AgendaConPuntos {
+  puntos?: PuntoAgenda[];
+}
+
 async function generarAsignacionesParaPuntos(
   reunionId: string,
-  reunionData: any,
-  agendaService: any,
+  reunionData: CrearReunionDTO,
+  agendaService: AgendaService,
   convocados: ConvocadoDTO[]
 ): Promise<GenerarAsignacion[]> {
   // 1. Obtener la agenda con puntos poblados
-  const agenda = await agendaService.obtenerAgendaConDatos(reunionData.agenda);
+  const agenda = await agendaService.obtenerAgendaConDatos(reunionData.agenda.toString()) as AgendaConPuntos;
   if (!agenda || !agenda.puntos || !Array.isArray(agenda.puntos)) return [];
 
   // 2. Mapear cada punto a la estructura de notificación de asignación
   const asignaciones = agenda.puntos
-    .filter((punto: any) => punto.expositor && typeof punto.expositor === 'string')
-    .map((punto: any) => {
+    .filter((punto: PuntoAgenda) => punto.expositor && typeof punto.expositor === 'string')
+    .map((punto: PuntoAgenda) => {
       // Buscar el correo del expositor en la lista de convocados
       const expositorConvocado = convocados.find(
-        (conv) => conv.nombre.trim().toLowerCase() === punto.expositor.trim().toLowerCase()
+        (conv) => conv.nombre.trim().toLowerCase() === punto.expositor!.trim().toLowerCase()
       );
       return {
         destinatario: expositorConvocado?.correo || '',
         datosAsignacion: {
           reunionId: String(reunionId),
           titulo: punto.titulo,
-          fechaReunion: reunionData.hora_inicio,
+          fechaReunion: reunionData.hora_inicio.toString(),
           rolAsignado: punto.tipo,
-          emisor: reunionData.organizacion
+          emisor: reunionData.organizacion.toString()
         }
       };
     })
@@ -61,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await connectToDatabase();
         const reunionService = new ReunionService();
         const agendaService = new AgendaService();
-        const reunionData = req.body;
+        const reunionData = req.body as CrearReunionDTO;
         
         // Validación actualizada para coincidir con los datos del hook
         if (!reunionData.titulo || 
@@ -96,12 +108,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 const datosNotificacion = {
                     reunionId: String(nuevaReunion._id || nuevaReunion.id),
                     titulo: reunionData.titulo,
-                    fechaReunion: reunionData.hora_inicio,
+                    fechaReunion: reunionData.hora_inicio.toString(),
                     lugar: reunionData.lugar,
                     modalidad: reunionData.modalidad,
                     tipoReunion: reunionData.tipo_reunion,
-                    agendaId: reunionData.agenda,
-                    emisor: reunionData.organizacion // Usar organización como emisor por ahora
+                    agendaId: reunionData.agenda.toString(),
+                    emisor: reunionData.organizacion.toString() // Usar organización como emisor por ahora
                 };
 
                 const resultadosNotificacion = await reunionNotificacionService
