@@ -1,6 +1,7 @@
 // src/pages/api/auth/forgot-password.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { AuthService } from '@/services/AuthService';
+import { PersonaAuthAdapter } from '@/adapters/PersonaAuthAdapter';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -8,8 +9,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const authService = new AuthService();
-    
     const body = req.body;
     const correo = body.correo || body.email;
 
@@ -29,14 +28,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // Usar el servicio de autenticación para solicitar recuperación
-    const result = await authService.solicitarRecuperacion(correo);
+    // Primero intentar como Usuario (admin)
+    const authService = new AuthService();
+    const usuarioResult = await authService.solicitarRecuperacion(correo);
 
-    if (result.success) {
-      return res.status(200).json(result);
-    } else {
-      return res.status(404).json(result);
+    if (usuarioResult.success) {
+      return res.status(200).json(usuarioResult);
     }
+
+    // Si falla como usuario, intentar como Persona (miembro de junta)
+    const personaAuthAdapter = new PersonaAuthAdapter();
+    const personaResult = await personaAuthAdapter.solicitarRecuperacionPersona(correo);
+
+    if (personaResult.success) {
+      return res.status(200).json(personaResult);
+    }
+
+    // Si ambos fallan, retornar error genérico
+    return res.status(404).json({
+      success: false,
+      message: 'No se encontró una cuenta con ese correo'
+    });
 
   } catch (error) {
     console.error('Error en forgot-password:', error);

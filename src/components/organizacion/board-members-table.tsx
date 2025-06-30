@@ -72,7 +72,7 @@ export function BoardMembersTable({ organizationId }: BoardMembersTableProps) {
   };
 
   const handleCopyPasswordLink = (email: string) => {
-    const link = `${window.location.origin}/auth/persona/set-password?email=${encodeURIComponent(email)}`;
+    const link = `${window.location.origin}/auth/set-password?email=${encodeURIComponent(email)}`;
     navigator.clipboard.writeText(link).then(() => {
       // Aquí podrías agregar una notificación de éxito
       alert('Enlace copiado al portapapeles');
@@ -207,7 +207,7 @@ export function BoardMembersTable({ organizationId }: BoardMembersTableProps) {
                           variant={member.contrasena ? 'default' : 'secondary'}
                           className={member.contrasena ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
                         >
-                          {member.contrasena ? 'Configurado' : 'Pendiente'}
+                          {member.contrasena ? 'Acceso Activo' : 'Sin Contraseña'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">

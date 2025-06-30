@@ -1,3 +1,4 @@
+// src/pages/api/auth/set-password.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { PersonaAuthAdapter } from '@/adapters/PersonaAuthAdapter';
 
@@ -7,35 +8,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { token, newPassword } = req.body;
+    const { email } = req.body;
 
     // Validación básica
-    if (!token || !newPassword) {
+    if (!email) {
       return res.status(400).json({
         success: false,
-        message: 'Token y nueva contraseña son requeridos'
+        message: 'Email es requerido'
       });
     }
 
-    // Validar longitud de contraseña
-    if (newPassword.length < 6) {
+    // Validar formato de correo
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
-        message: 'La contraseña debe tener al menos 6 caracteres'
+        message: 'Formato de correo inválido'
       });
     }
 
-    // Crear el adaptador y procesar el restablecimiento
+    // Generar un token de recuperación para establecer la primera contraseña
+    // Esto es más seguro que establecer directamente con email
     const personaAuthAdapter = new PersonaAuthAdapter();
-    const result = await personaAuthAdapter.restablecerContrasenaPersona(token, newPassword);
+    const result = await personaAuthAdapter.solicitarRecuperacionPersona(email);
 
     if (result.success) {
-      return res.status(200).json(result);
+      return res.status(200).json({
+        ...result,
+        message: 'Se ha generado un enlace para establecer tu contraseña. Revisa tu correo electrónico.'
+      });
     } else {
       return res.status(400).json(result);
     }
   } catch (error) {
-    console.error('Error en API reset-password persona:', error);
+    console.error('Error en set-password:', error);
     return res.status(500).json({
       success: false,
       message: 'Error interno del servidor'

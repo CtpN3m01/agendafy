@@ -68,22 +68,8 @@ export function useBoardMembers(organizationId: string | null): UseBoardMembersR
     if (!organizationId) return false;
 
     try {
-      // Usar la nueva API que maneja contraseñas
-      const response = await fetch('/api/organizacion/crear-miembro', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...member,
-          organizacion: organizationId
-        }),
-      });
-
-      const data = await response.json();
-
-      // Api original para agregar miembro a la organización
-      const orgResponse = await fetch(`/api/mongo/organizacion/agregarMiembrosJunta?id=${organizationId}`, {
+      // Usar la API principal que ahora genera contraseñas automáticamente
+      const response = await fetch(`/api/mongo/organizacion/agregarMiembrosJunta?id=${organizationId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -91,13 +77,13 @@ export function useBoardMembers(organizationId: string | null): UseBoardMembersR
         body: JSON.stringify(member),
       });
 
-      const orgData = await orgResponse.json();
+      const data = await response.json();
 
-      if (orgData.success && data.success) {
+      if (data.success) {
         await fetchMembers(); // Refetch to get updated list
         return true;
       } else {
-        setError(orgData.message || 'Error al agregar miembro a la organización');
+        setError(data.message || 'Error al agregar miembro a la organización');
         return false;
       }
     } catch (error) {

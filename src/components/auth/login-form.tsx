@@ -8,10 +8,9 @@ interface LoginFormProps {
   onLogin: (credentials: LoginCredentials) => Promise<AuthResponse>;
   onForgotPassword: () => void;
   onRegister: () => void;
-  onPersonaLogin?: () => void;
 }
 
-export function LoginForm({ onLogin, onForgotPassword, onRegister, onPersonaLogin }: LoginFormProps) {
+export function LoginForm({ onLogin, onForgotPassword, onRegister }: LoginFormProps) {
   const [credentials, setCredentials] = useState<LoginCredentials>({
     email: "",
     password: "",
@@ -51,6 +50,7 @@ export function LoginForm({ onLogin, onForgotPassword, onRegister, onPersonaLogi
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Iniciar Sesión</h2>
         <p className="text-gray-600">Accede a tu cuenta de Agendafy</p>
+        <p className="text-sm text-blue-600 mt-1">Para administradores y miembros de junta</p>
       </div>
 
       {errors.general && (
@@ -140,19 +140,6 @@ export function LoginForm({ onLogin, onForgotPassword, onRegister, onPersonaLogi
             Regístrate aquí
           </button>
         </div>
-
-        {onPersonaLogin && (
-          <div className="text-center pt-4 border-t border-gray-200">
-            <p className="text-sm text-gray-600 mb-2">¿Eres miembro de la junta directiva?</p>
-            <button
-              type="button"
-              onClick={onPersonaLogin}
-              className="text-sm text-green-600 hover:text-green-500 font-medium"
-            >
-              Acceso para miembros
-            </button>
-          </div>
-        )}
       </form>
     </div>
   );

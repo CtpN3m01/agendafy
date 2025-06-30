@@ -5,6 +5,7 @@ import { PersonaLoginDTO, PersonaAuthResponseDTO, PersonaResponseDTO } from '@/t
 import { CrearUsuarioDTO, UsuarioDTO, LoginResponseDTO } from '@/types/UsuarioDTO';
 import { HashUtil } from '@/lib/hash';
 import { AuthUtil } from '@/lib/auth';
+import { EmailService } from '@/services/EmailService';
 
 /**
  * Adaptador que permite a las entidades Persona utilizar el AuthService
@@ -120,12 +121,21 @@ export class PersonaAuthAdapter {
 
       await this.personaDAO.actualizarToken((persona as any)._id.toString(), resetToken, expires);
 
-      // TODO: Aquí se podría implementar el envío de email específico para personas
-      // Por ahora solo retornamos éxito con el token generado
+      // Enviar email de recuperación
+      try {
+        const emailService = new EmailService();
+        await emailService.enviarCorreoRecuperacion(correo, resetToken);
+      } catch (emailError) {
+        console.error('Error al enviar email de recuperación para persona:', emailError);
+        return {
+          success: false,
+          message: 'Error al enviar el correo de recuperación. Inténtalo de nuevo más tarde.'
+        };
+      }
 
       return {
         success: true,
-        message: 'Se ha generado el token de recuperación. Verifica la configuración de email para recibir instrucciones.'
+        message: 'Se ha enviado un correo electrónico con las instrucciones para restablecer tu contraseña.'
       };
     } catch (error) {
       console.error('Error en recuperación de persona:', error);
