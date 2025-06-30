@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Users, Loader2, Link, Copy } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Loader2, Link } from "lucide-react";
 import { useBoardMembers } from "@/hooks/use-board-members";
 import { BoardMemberForm } from "./board-member-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";

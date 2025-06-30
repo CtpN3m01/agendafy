@@ -58,7 +58,7 @@ export function SetPasswordForm({ email, onSuccess, onCancel }: SetPasswordFormP
       } else {
         setErrors({ general: data.message });
       }
-    } catch (error) {
+    } catch {
       setErrors({ general: "Error de conexión" });
     } finally {
       setIsLoading(false);

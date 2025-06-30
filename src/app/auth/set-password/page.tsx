@@ -45,7 +45,7 @@ export default function SetPasswordPage() {
       } else {
         setError(data.message || 'Error al generar el enlace');
       }
-    } catch (error) {
+    } catch {
       setError('Error de conexión');
     } finally {
       setIsLoading(false);
