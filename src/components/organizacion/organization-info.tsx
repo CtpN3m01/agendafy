@@ -8,11 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import {  Mail, Phone, MapPin, Loader2, Upload, X, Image as ImageIcon, Pencil } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {  Mail, Phone, MapPin, Loader2, Upload, X, Image as ImageIcon, Pencil, Info } from "lucide-react";
 import { OrganizationLogo } from "./organization-logo";
 import { BoardMembersTable } from "./board-members-table";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { useUserPermissions, useUserRole } from "@/hooks/use-user-permissions";
 
 interface OrganizationData {
   id: string;
@@ -32,6 +35,11 @@ interface OrganizationInfoProps {
 
 export function OrganizationInfo({ organization, onUpdate }: OrganizationInfoProps) {
   const { user } = useAuth();
+  
+  // Usar el sistema de permisos basado en Visitor Pattern
+  const permissions = useUserPermissions();
+  const { role, displayName } = useUserRole();
+  
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
@@ -147,6 +155,7 @@ export function OrganizationInfo({ organization, onUpdate }: OrganizationInfoPro
 
   return (
     <div className="space-y-6">
+      {/* Header con información de rol */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <OrganizationLogo 
@@ -155,17 +164,25 @@ export function OrganizationInfo({ organization, onUpdate }: OrganizationInfoPro
             size="md"
           />
           <div>
-            <h1 className="text-2xl font-bold">{organization.nombre}</h1>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-2xl font-bold">{organization.nombre}</h1>
+              <Badge variant={role === 'admin' ? 'default' : 'secondary'}>
+                {displayName}
+              </Badge>
+            </div>
             <p className="text-muted-foreground">Organización activa</p>
           </div>
         </div>
         
-        <Dialog open={isEditing} onOpenChange={setIsEditing}>          <DialogTrigger asChild>
-            <Button>
-              <Pencil className="h-4 w-4 mr-2" />
-              Editar Información
-            </Button>
-          </DialogTrigger>
+        {/* Botón editar solo para administradores */}
+        {permissions.canManageOrganization && (
+          <Dialog open={isEditing} onOpenChange={setIsEditing}>
+            <DialogTrigger asChild>
+              <Button>
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar Información
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Editar Organización</DialogTitle>
@@ -287,7 +304,19 @@ export function OrganizationInfo({ organization, onUpdate }: OrganizationInfoPro
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        )}
       </div>
+
+      {/* Mensaje informativo para miembros de junta */}
+      {role === 'board-member' && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            👁️ <strong>Modo de visualización:</strong> Solo puedes ver la información de la organización. 
+            Las modificaciones las realiza el administrador.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Card de Información de Contacto - Ahora ocupa todo el ancho */}
       <Card>
