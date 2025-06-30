@@ -29,6 +29,7 @@ export function useUserProfile() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
   // Función para obtener el perfil completo del usuario
   const fetchUserProfile = useCallback(async () => {
     if (!isAuthenticated || !token || !authUser) {
@@ -55,6 +56,7 @@ export function useUserProfile() {
       }
     } catch (err) {
       console.error('Error fetching user profile:', err);
+      console.error('Hook: Usuario:', authUser);
       if (authUser) {
         const basicProfile = mapAuthUserToProfile(authUser);
         const normalizedBasicProfile = normalizeProfileData(basicProfile);

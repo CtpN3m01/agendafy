@@ -238,46 +238,18 @@ export class PersonaAuthAdapter {
       console.log('PersonaAuthAdapter: actualizarPerfil - ID:', id);
       console.log('PersonaAuthAdapter: actualizarPerfil - Datos:', datos);
 
-      // Obtener los datos actuales de la persona
-      const personaActual = await this.personaDAO.buscarPorId(id);
-      if (!personaActual) {
-        throw new Error('Persona no encontrada');
-      }
-
       // Adaptar el campo organizacion si existe y es ObjectId
       const datosAdaptados: any = { ...datos };
       if (datos.organizacion && typeof datos.organizacion !== 'string') {
         datosAdaptados.organizacion = datos.organizacion.toString();
       }
 
-      // Construir el objeto completo para el DAO
-      const datosCompletos: CrearPersonaDTO = {
-        nombre: datosAdaptados.nombre ?? personaActual.nombre,
-        apellidos: datosAdaptados.apellidos ?? personaActual.apellidos,
-        correo: datosAdaptados.correo ?? personaActual.correo,
-        rol: datosAdaptados.rol ?? personaActual.rol,
-        organizacion: datosAdaptados.organizacion ?? personaActual.organizacion,
-      };
-
-      const resultado = await this.personaDAO.actualizarPersona(id, datosCompletos);
+      const resultado = await this.personaDAO.actualizarPersona(id, datosAdaptados);
       console.log('PersonaAuthAdapter: actualizarPerfil - Resultado:', resultado ? 'exitoso' : 'falló');
       return resultado;
     } catch (error) {
       console.error('PersonaAuthAdapter: Error en actualizarPerfil:', error);
       throw error;
-    }
-  }
-
-  /*
-  * Verifica si un ID corresponde a una persona (miembro) existente
-  */
-  async esMiembro(id: string): Promise<boolean> {
-    try {
-      const persona = await this.personaDAO.buscarPorId(id);
-      return !!persona;
-    } catch (error) {
-      console.error('PersonaAuthAdapter: Error en esMiembro:', error);
-      return false;
     }
   }
 

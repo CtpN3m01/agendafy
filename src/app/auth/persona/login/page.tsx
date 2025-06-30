@@ -17,13 +17,6 @@ interface ProfileInfoProps {
   onUpdate: (data: Partial<UserProfile>) => Promise<void>;
 }
 
-// Utilidad para saber si el usuario es miembro
-const isMiembro = (user: UserProfile) => {
-  // Si tienes el campo type en el perfil, úsalo. Si no, puedes inferirlo por la ausencia de campos admin
-  console.log('isMiembro - Usuario:', user);
-  return (user as any).type === 'miembro';
-};
-
 // Función utilitaria para formatear fechas
 const formatDate = (date: Date | string | unknown): string => {
   try {
@@ -64,11 +57,10 @@ export function ProfileInfo({ user, onUpdate }: ProfileInfoProps) {
   const [formData, setFormData] = useState({
     name: user.name,
     email: user.email,
-    phone: isMiembro(user) ? '' : (user.phone || ""),
+    phone: user.phone || "",
     position: user.position || "",
-    department: isMiembro(user) ? '' : (user.department || ""),
-    bio: isMiembro(user) ? '' : (user.bio || ""),
-    type: (user as any).type || undefined,
+    department: user.department || "",
+    bio: user.bio || "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isMiembroUser, setIsMiembroUser] = useState<boolean>(false);
@@ -105,15 +97,14 @@ export function ProfileInfo({ user, onUpdate }: ProfileInfoProps) {
     setFormData({
       name: user.name,
       email: user.email,
-      phone: isMiembro(user) ? '' : (user.phone || ""),
+      phone: user.phone || "",
       position: user.position || "",
-      department: isMiembro(user) ? '' : (user.department || ""),
-      bio: isMiembro(user) ? '' : (user.bio || ""),
-      type: (user as any).type || undefined,
+      department: user.department || "",
+      bio: user.bio || "",
     });
     setIsEditing(false);
   };
-  console.log('ProfileInfo - Estado de edición:', formData);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -164,7 +155,7 @@ export function ProfileInfo({ user, onUpdate }: ProfileInfoProps) {
                 <h3 className="text-xl font-semibold">{user.name}</h3>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{user.position || "Sin cargo"}</Badge>
-                  {!isMiembro(user) && user.department && (
+                  {user.department && (
                     <Badge variant="outline">{user.department}</Badge>
                   )}
                 </div>
