@@ -26,7 +26,7 @@ export function useWebSocketNotifications(): WebSocketNotificationHook {
 
   // Fallback: cargar notificaciones via API tradicional
   const loadNotificationsViaAPI = useCallback(async () => {
-    if (!user?.correo || user.type !== 'persona') return;
+    if (!user?.correo || user.type !== 'miembro') return;
 
     try {
       const [notificacionesRes, conteoRes] = await Promise.all([
@@ -48,7 +48,7 @@ export function useWebSocketNotifications(): WebSocketNotificationHook {
 
   // Función para conectar WebSocket
   const connect = useCallback(() => {
-    if (!user?.correo || user.type !== 'persona') {
+    if (!user?.correo || user.type !== 'miembro') {
       return; // Solo miembros de junta reciben notificaciones en tiempo real
     }
 
@@ -202,7 +202,7 @@ export function useWebSocketNotifications(): WebSocketNotificationHook {
 
   // Conectar cuando el usuario esté disponible
   useEffect(() => {
-    if (user?.correo && user.type === 'persona') {
+    if (user?.correo && user.type === 'miembro') {
       connect();
     }
 

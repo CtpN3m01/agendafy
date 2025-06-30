@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from 'next';
 import { notificacionService } from '@/services/NotificacionService';
-import { TipoNotificacion } from '@/types/NotificacionDTO';
+import { TipoNotificacion, FiltrosNotificacionDTO } from '@/types/NotificacionDTO';
 
 /**
  * API para obtener notificaciones con paginación y filtros avanzados
@@ -28,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } = req.query;
 
     // Construir filtros
-    const filtros: any = {};
+    const filtros: FiltrosNotificacionDTO = {};
 
     // Paginación
     if (pagina && typeof pagina === 'string') {

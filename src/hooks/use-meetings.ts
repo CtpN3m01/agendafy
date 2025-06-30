@@ -173,8 +173,22 @@ export function useMeetings(organizacionId?: string): UseMeetingsReturn {
           console.log("✅ Archivos subidos exitosamente:", archivosFilenames);
         } catch (fileError) {
           console.error("❌ Error al subir archivos:", fileError);
-          setError("Error al subir los archivos adjuntos");
-          return null;
+          
+          // Verificar si es un error de conectividad a Supabase
+          const errorMessage = fileError instanceof Error ? fileError.message : String(fileError);
+          
+          if (errorMessage.includes('Failed to fetch') || 
+              errorMessage.includes('ERR_NAME_NOT_RESOLVED') ||
+              errorMessage.includes('Supabase connection failed')) {
+            
+            console.warn("⚠️ Sin conectividad a Supabase. Creando reunión sin archivos...");
+            // Continuar sin archivos en lugar de fallar
+            archivosFilenames = [];
+          } else {
+            // Para otros errores, fallar la creación
+            setError("Error al subir los archivos adjuntos");
+            return null;
+          }
         }
       }
 

@@ -17,9 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const updated = await puntoService.editarPunto(id, updateData);    return res.status(200).json({ message: 'Punto actualizado correctamente', punto: updated });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error al editar el punto:', error);
-    return res.status(500).json({ message: error.message || 'Error interno del servidor' });
+    return res.status(500).json({ message: (error as Error).message || 'Error interno del servidor' });
   }
 }

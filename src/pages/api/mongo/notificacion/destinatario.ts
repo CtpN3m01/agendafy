@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from 'next';
 import { notificacionService } from '@/services/NotificacionService';
+import { FiltrosNotificacionDTO, TipoNotificacion } from '@/types/NotificacionDTO';
 
 /**
  * API para obtener notificaciones por destinatario
@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Construir filtros
-    const filtros: any = {};
+    const filtros: FiltrosNotificacionDTO = {};
     
     if (limite && typeof limite === 'string') {
       const limiteNum = parseInt(limite);
@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (tipo && typeof tipo === 'string') {
-      filtros.tipo = tipo;
+      filtros.tipo = tipo as TipoNotificacion;
     }
 
     if (fechaDesde && typeof fechaDesde === 'string') {

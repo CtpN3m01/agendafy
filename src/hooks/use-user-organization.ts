@@ -39,7 +39,7 @@ export function useUserOrganization(): UseUserOrganizationReturn {
 
       // Selecciona el endpoint según el tipo de usuario
       let endpoint = '';
-      if (user.type === 'persona' && user.organizacion) {
+      if (user.type === 'miembro' && user.organizacion) {
         endpoint = `/api/mongo/organizacion/obtenerOrganizacion?id=${user.organizacion}`;
       } else {
         endpoint = `/api/mongo/organizacion/obtenerOrganizacion?userId=${user.id}`;

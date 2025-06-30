@@ -83,11 +83,11 @@ export class PermissionContext {
   /**
    * Obtiene los permisos según el tipo de usuario
    */
-  getPermissions(userType: 'usuario' | 'persona'): AdminPermissions | BoardMemberPermissions {
+  getPermissions(userType: 'usuario' | 'miembro'): AdminPermissions | BoardMemberPermissions {
     switch (userType) {
       case 'usuario':
         return this.visitor.visitAdmin();
-      case 'persona':
+      case 'miembro':
         return this.visitor.visitBoardMember();
       default:
         return this.visitor.visitAdmin();
@@ -117,7 +117,7 @@ export function useUserPermissions() {
  * Utility function para verificar si el usuario puede realizar una acción
  */
 export function canUserPerformAction(
-  userType: 'usuario' | 'persona' | undefined,
+  userType: 'usuario' | 'miembro' | undefined,
   action: keyof (AdminPermissions & BoardMemberPermissions)
 ): boolean {
   if (!userType) return false;

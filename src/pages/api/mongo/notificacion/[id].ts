@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from 'next';
 import { notificacionService } from '@/services/NotificacionService';
 
@@ -69,7 +68,7 @@ async function obtenerNotificacion(id: string, res: NextApiResponse) {
 /**
  * Actualizar notificación
  */
-async function actualizarNotificacion(id: string, body: any, res: NextApiResponse) {
+async function actualizarNotificacion(id: string, body: { asunto?: string; contenido?: string; leida?: boolean }, res: NextApiResponse) {
   const { asunto, contenido, leida } = body;
 
   // Validar que al menos un campo sea proporcionado
@@ -81,7 +80,11 @@ async function actualizarNotificacion(id: string, body: any, res: NextApiRespons
   }
 
   // Construir objeto de actualización
-  const datosActualizacion: any = {};
+  const datosActualizacion: {
+    asunto?: string;
+    contenido?: string;
+    leida?: boolean;
+  } = {};
   
   if (asunto !== undefined) {
     if (typeof asunto !== 'string' || asunto.trim().length === 0) {

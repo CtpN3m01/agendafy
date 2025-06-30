@@ -148,7 +148,7 @@ export function AppLayout({ children, sidebarConfig, onLogout }: AppLayoutProps)
     isLoading: notificacionesLoading,
     marcarComoLeida,
     eliminarNotificacion,
-  } = useNotificaciones(user?.type === 'persona' ? user?.correo : undefined);
+  } = useNotificaciones(user?.type === 'miembro' ? user?.correo : undefined);
 
   // Hook para notificaciones en tiempo real via SSE (solo para miembros de la junta)
   useSSENotifications();
@@ -228,7 +228,7 @@ export function AppLayout({ children, sidebarConfig, onLogout }: AppLayoutProps)
           
           {/* Campana de notificaciones - solo para miembros de junta */}
           <div className="flex items-center gap-3">
-            {user && user.type === 'persona' && (
+            {user && user.type === 'miembro' && (
               <NotificacionBell
                 notificaciones={notificaciones}
                 conteoNoLeidas={conteoNoLeidas}

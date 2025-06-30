@@ -24,9 +24,11 @@ interface NotificacionListaProps {
   notificaciones: NotificacionResponseDTO[];
   conteoNoLeidas: number;
   isLoading: boolean;
+  destinatario: string;
   onMarcarLeida: (id: string) => Promise<boolean>;
   onMarcarVariasLeidas: (ids: string[]) => Promise<number>;
   onEliminar: (id: string) => Promise<boolean>;
+  onVaciarBuzon?: (destinatario: string) => Promise<boolean>;
   onRefrescar: () => Promise<void>;
   onNotificacionClick?: (notificacion: NotificacionResponseDTO) => void;
 }
@@ -38,9 +40,11 @@ export const NotificacionLista: React.FC<NotificacionListaProps> = ({
   notificaciones,
   conteoNoLeidas,
   isLoading,
+  destinatario,
   onMarcarLeida,
   onMarcarVariasLeidas,
   onEliminar,
+  onVaciarBuzon,
   onRefrescar,
   onNotificacionClick
 }) => {
@@ -138,6 +142,19 @@ export const NotificacionLista: React.FC<NotificacionListaProps> = ({
               >
                 <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
               </Button>
+              {onVaciarBuzon && destinatario && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={async () => {
+                  await onVaciarBuzon(destinatario);
+                }}
+                disabled={isLoading || notificaciones.length === 0}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Vaciar Buzón
+              </Button>
+            )}
             </div>
           </div>
         </CardHeader>

@@ -149,7 +149,7 @@ export function MeetingList({ organizacionId }: MeetingListProps) {
       </div>
 
       {/* Mensaje informativo para miembros de junta */}
-      {role === 'board-member' && user?.type === 'persona' && (
+      {role === 'board-member' && user?.type === 'miembro' && (
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>

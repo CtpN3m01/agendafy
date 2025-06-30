@@ -37,6 +37,8 @@ export default function LoginPage() {
       if (data.success && data.token && data.user) {
         // Usar el hook de autenticación para manejar el login
         login(data.token, data.user);
+
+        console.log("Login exitoso:", data);
         
         // Redirigir al dashboard principal de reuniones
         router.push('/reuniones');

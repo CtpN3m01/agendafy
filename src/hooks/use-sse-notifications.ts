@@ -26,7 +26,7 @@ export function useSSENotifications(): SSENotificationHook {
 
   // Función para conectar SSE
   const connect = useCallback(() => {
-    if (!user || !token || user.type !== 'persona') {
+    if (!user || !token || user.type !== 'miembro') {
       return;
     }
 
@@ -180,7 +180,7 @@ export function useSSENotifications(): SSENotificationHook {
 
   // Efecto para manejar la conexión
   useEffect(() => {
-    if (user && user.type === 'persona' && token) {
+    if (user && user.type === 'miembro' && token) {
       connect();
     } else {
       disconnect();
