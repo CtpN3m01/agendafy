@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
+import { useMemo } from "react";
 import { LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useNotificaciones } from "@/hooks/use-notificaciones";
 import { useNotificacionCount } from "@/hooks/use-notificacion-count";
+import { useSSENotifications } from "@/hooks/use-sse-notifications";
 import { NotificacionBell } from "@/components/notificacion";
 import {
   Sidebar,
@@ -27,6 +29,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { SidebarConfig } from "./types";
 import { defaultSidebarConfig } from "./sidebar-config";
+import { createSidebarConfig } from "./sidebar-visitor";
 import { NotificacionResponseDTO } from "@/types/NotificacionDTO";
 import { toast } from "sonner";
 
@@ -127,17 +130,28 @@ function AppSidebar({ config, onLogout }: { config: SidebarConfig; onLogout?: ()
 }
 
 export function AppLayout({ children, sidebarConfig, onLogout }: AppLayoutProps) {
-  const config = sidebarConfig || defaultSidebarConfig;
   const { logout, user } = useAuth();
+  
+  // Usar el patrón Visitor para generar la configuración según el tipo de usuario
+  const dynamicConfig = useMemo(() => {
+    return user?.type ? createSidebarConfig(user.type) : defaultSidebarConfig;
+  }, [user?.type]);
+  
+  const config = sidebarConfig || dynamicConfig;
+  
   const router = useRouter();
 
+  // Hook para notificaciones tradicionales
   const {
     notificaciones,
     conteoNoLeidas,
     isLoading: notificacionesLoading,
     marcarComoLeida,
     eliminarNotificacion,
-  } = useNotificaciones(user?.correo);
+  } = useNotificaciones(user?.type === 'persona' ? user?.correo : undefined);
+
+  // Hook para notificaciones en tiempo real via SSE (solo para miembros de la junta)
+  useSSENotifications();
 
   const handleLogout = () => {
     console.log("Cerrando sesión...");
@@ -212,9 +226,9 @@ export function AppLayout({ children, sidebarConfig, onLogout }: AppLayoutProps)
             <h1 className="text-lg font-semibold">Panel de Control</h1>
           </div>
           
-          {/* Campana de notificaciones */}
+          {/* Campana de notificaciones - solo para miembros de junta */}
           <div className="flex items-center gap-3">
-            {user && (
+            {user && user.type === 'persona' && (
               <NotificacionBell
                 notificaciones={notificaciones}
                 conteoNoLeidas={conteoNoLeidas}

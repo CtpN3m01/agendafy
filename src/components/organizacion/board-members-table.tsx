@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Users, Loader2, Link } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Loader2, Link, Info } from "lucide-react";
 import { useBoardMembers } from "@/hooks/use-board-members";
+import { useUserPermissions, useUserRole } from "@/hooks/use-user-permissions";
 import { BoardMemberForm } from "./board-member-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -26,6 +27,11 @@ interface BoardMembersTableProps {
 
 export function BoardMembersTable({ organizationId }: BoardMembersTableProps) {
   const { members, isLoading, error, addMember, updateMember, deleteMember } = useBoardMembers(organizationId);
+  
+  // Usar el sistema de permisos basado en Visitor Pattern
+  const permissions = useUserPermissions();
+  const { role, displayName } = useUserRole();
+  
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<BoardMember | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -132,21 +138,44 @@ export function BoardMembersTable({ organizationId }: BoardMembersTableProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Miembros de la Junta Directiva
-              </CardTitle>
+              <div className="flex items-center gap-3 mb-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Miembros de la Junta Directiva
+                </CardTitle>
+                <Badge variant={role === 'admin' ? 'default' : 'secondary'}>
+                  {displayName}
+                </Badge>
+              </div>
               <CardDescription>
-                Gestiona los miembros de la junta directiva de tu organización
+                {role === 'admin' 
+                  ? "Gestiona los miembros de la junta directiva de tu organización"
+                  : "Lista de los miembros de la junta directiva"
+                }
               </CardDescription>
             </div>
-            <Button onClick={() => setIsFormOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Agregar Miembro
-            </Button>
+            
+            {/* Botón agregar solo para administradores */}
+            {permissions.canManageUsers && (
+              <Button onClick={() => setIsFormOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Miembro
+              </Button>
+            )}
           </div>
         </CardHeader>        
         <CardContent>
+          {/* Mensaje informativo para miembros de junta */}
+          {role === 'board-member' && (
+            <Alert className="mb-4">
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                👁️ <strong>Modo de visualización:</strong> Solo puedes ver la lista de miembros de la junta. 
+                La gestión de miembros la realiza el administrador.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>{error}</AlertDescription>
@@ -212,35 +241,47 @@ export function BoardMembersTable({ organizationId }: BoardMembersTableProps) {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {!member.contrasena && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleCopyPasswordLink(member.correo)}
-                              title="Copiar enlace para configurar contraseña"
-                            >
-                              <Link className="h-4 w-4" />
-                            </Button>
+                          {/* Botones de acción solo para administradores */}
+                          {permissions.canManageUsers && (
+                            <>
+                              {!member.contrasena && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleCopyPasswordLink(member.correo)}
+                                  title="Copiar enlace para configurar contraseña"
+                                >
+                                  <Link className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openEditForm(member)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteMember(member._id)}
+                                disabled={deletingId === member._id}
+                              >
+                                {deletingId === member._id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </>
                           )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditForm(member)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteMember(member._id)}
-                            disabled={deletingId === member._id}
-                          >
-                            {deletingId === member._id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4" />
-                            )}
-                          </Button>
+                          
+                          {/* Para miembros de junta, mostrar mensaje de solo lectura */}
+                          {!permissions.canManageUsers && (
+                            <span className="text-sm text-muted-foreground italic">
+                              Solo lectura
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -252,22 +293,27 @@ export function BoardMembersTable({ organizationId }: BoardMembersTableProps) {
         </CardContent>
       </Card>
 
-      {/* Formulario para agregar miembro */}
-      <BoardMemberForm
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSubmit={handleAddMember}
-        isEditing={false}
-      />
+      {/* Formularios solo para administradores */}
+      {permissions.canManageUsers && (
+        <>
+          {/* Formulario para agregar miembro */}
+          <BoardMemberForm
+            isOpen={isFormOpen}
+            onClose={() => setIsFormOpen(false)}
+            onSubmit={handleAddMember}
+            isEditing={false}
+          />
 
-      {/* Formulario para editar miembro */}
-      <BoardMemberForm
-        isOpen={!!editingMember}
-        onClose={closeEditForm}
-        onSubmit={handleEditMember}
-        member={editingMember}
-        isEditing={true}
-      />
+          {/* Formulario para editar miembro */}
+          <BoardMemberForm
+            isOpen={!!editingMember}
+            onClose={closeEditForm}
+            onSubmit={handleEditMember}
+            member={editingMember}
+            isEditing={true}
+          />
+        </>
+      )}
     </>
   );
 }

@@ -3,8 +3,7 @@ import {
   UserCircle, 
   Building, 
   Video,
-  FileText,
-  BellDotIcon
+  FileText
 } from "lucide-react";
 import { SidebarConfig } from "./types";
 
@@ -34,21 +33,6 @@ export const defaultSidebarConfig: SidebarConfig = {
           title: "Perfil",
           icon: UserCircle,
           href: "/perfil",
-        },
-      ],
-    },
-    {
-      title: "Sistema",
-      items: [
-    //     {
-    //       title: "Configuración",
-    //       icon: Settings,
-    //       href: "/configuracion",
-    //     },
-        {
-          title: "Notificaciones",
-          icon: BellDotIcon,
-          href: "/notificaciones",
         },
       ],
     },

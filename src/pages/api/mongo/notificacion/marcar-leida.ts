@@ -1,15 +1,16 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { notificacionService } from '@/services/NotificacionService';
+import { sendNotificationToUser } from '../../websocket';
 
 /**
  * API para marcar notificaciones como leídas
  * PATCH /api/mongo/notificacion/marcar-leida
  * 
  * Body (una notificación):
- * { "id": "notificacion_id" }
+ * { "id": "notificacion_id", "userEmail": "user@example.com" }
  * 
  * Body (múltiples notificaciones):
- * { "ids": ["id1", "id2", "id3"] }
+ * { "ids": ["id1", "id2", "id3"], "userEmail": "user@example.com" }
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PATCH') {
@@ -20,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { id, ids } = req.body;
+    const { id, ids, userEmail } = req.body;
 
     // Validar que se proporcione al menos uno de los parámetros
     if (!id && !ids) {
@@ -39,6 +40,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           success: false,
           message: 'Notificación no encontrada'
         });
+      }
+
+      // Notificar vía WebSocket que la notificación fue marcada como leída
+      if (userEmail) {
+        try {
+          sendNotificationToUser(userEmail, {
+            type: 'NOTIFICATION_READ',
+            notificationId: id
+          });
+        } catch (wsError) {
+          console.warn('Error al enviar WebSocket de lectura:', wsError);
+        }
       }
 
       return res.status(200).json({
@@ -64,6 +77,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const cantidadMarcadas = await notificacionService.marcarVariasComoLeidas(ids);
+      
+      // Notificar vía WebSocket que las notificaciones fueron marcadas como leídas
+      if (userEmail) {
+        try {
+          sendNotificationToUser(userEmail, {
+            type: 'NOTIFICATIONS_READ',
+            notificationIds: ids,
+            count: cantidadMarcadas
+          });
+        } catch (wsError) {
+          console.warn('Error al enviar WebSocket de lectura múltiple:', wsError);
+        }
+      }
       
       return res.status(200).json({
         success: true,
