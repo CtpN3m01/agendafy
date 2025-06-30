@@ -10,6 +10,7 @@ interface UseNotificacionesReturn {
   marcarComoLeida: (id: string) => Promise<boolean>;
   marcarVariasComoLeidas: (ids: string[]) => Promise<number>;
   eliminarNotificacion: (id: string) => Promise<boolean>;
+  borrarBuzon: (destinatario: string) => Promise<boolean>;
   actualizarConteoNoLeidas: () => Promise<void>;
   refrescarNotificaciones: () => Promise<void>;
 }
@@ -184,6 +185,32 @@ export function useNotificaciones(destinatario?: string): UseNotificacionesRetur
     }
   }, [actualizarConteoNoLeidas, handleError]);
 
+  const borrarBuzon = useCallback(async (): Promise<boolean> => {
+    if (!destinatario) return false;
+    try {
+      const response = await fetch(`/api/mongo/notificacion/vaciarbuzon?destinatario=${encodeURIComponent(destinatario)}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setNotificaciones([]);
+        await actualizarConteoNoLeidas();
+        return true;
+      } else {
+        throw new Error(data.message || 'Error al vaciar el buzón');
+      }
+    } catch (error) {
+      handleError(error, 'Error al vaciar el buzón');
+      return false;
+    }
+  }, [destinatario, actualizarConteoNoLeidas, handleError]);
+
   const refrescarNotificaciones = useCallback(async () => {
     await Promise.all([
       obtenerNotificaciones(),
@@ -207,6 +234,7 @@ export function useNotificaciones(destinatario?: string): UseNotificacionesRetur
     marcarComoLeida,
     marcarVariasComoLeidas,
     eliminarNotificacion,
+    borrarBuzon,
     actualizarConteoNoLeidas,
     refrescarNotificaciones,
   };
