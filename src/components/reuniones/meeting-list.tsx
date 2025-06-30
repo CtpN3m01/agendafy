@@ -1,12 +1,13 @@
 // src/components/reuniones/meeting-list.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   CalendarDays,
   Users,
@@ -14,9 +15,12 @@ import {
   Plus,
   Loader2,
   Eye,
-  FileText
+  FileText,
+  Info
 } from "lucide-react";
 import { useMeetings } from "@/hooks/use-meetings";
+import { useUserPermissions, useUserRole } from "@/hooks/use-user-permissions";
+import { useAuth } from "@/hooks/use-auth";
 import { CreateMeetingDialog } from "./create-meeting-dialog";
 
 interface MeetingListProps {
@@ -27,6 +31,35 @@ export function MeetingList({ organizacionId }: MeetingListProps) {
   const router = useRouter();
   const { meetings, isLoading, error, refetch } = useMeetings(organizacionId);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  
+  // Usar el sistema de permisos basado en Visitor Pattern
+  const permissions = useUserPermissions();
+  const { role, displayName } = useUserRole();
+  const { user } = useAuth();
+  
+  // Filtrar reuniones según el rol del usuario
+  const filteredMeetings = useMemo(() => {
+    // LÓGICA MEJORADA: Si el tipo es undefined, asumimos que es administrador
+    const isAdmin = (
+      role === 'admin' || 
+      user?.type === 'usuario' || 
+      (!user?.type && permissions.canCreate) || 
+      !user?.type 
+    );
+    
+    if (isAdmin) {
+      // Los administradores ven todas las reuniones
+      return meetings;
+    } else {
+      // Los miembros de junta solo ven reuniones donde han sido convocados
+      return meetings.filter(meeting => 
+        meeting.convocados?.some(convocado => 
+          convocado.correo === user?.correo
+        )
+      );
+    }
+  }, [meetings, role, user, permissions]);
+  
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "Sin fecha";
     const date = new Date(dateStr);
@@ -84,43 +117,75 @@ export function MeetingList({ organizacionId }: MeetingListProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header con botón de crear */}
+      {/* Header con información según el rol */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Reuniones</h2>
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="text-2xl font-bold">Reuniones</h2>
+            <Badge variant={
+              (role === 'admin' || user?.type === 'usuario' || !user?.type) ? 'default' : 'secondary'
+            }>
+              {user?.type === 'usuario' ? 'Administrador' : 
+               (!user?.type ? 'Administrador' : displayName)}
+            </Badge>
+          </div>
           <p className="text-muted-foreground">
-            {meetings.length === 0 
-              ? "No hay reuniones registradas" 
-              : `${meetings.length} reunión${meetings.length !== 1 ? 'es' : ''} encontrada${meetings.length !== 1 ? 's' : ''}`
+            {filteredMeetings.length === 0 
+              ? ((role === 'admin' || user?.type === 'usuario' || !user?.type)
+                  ? "No hay reuniones registradas. Crea tu primera reunión para comenzar." 
+                  : "No hay reuniones en las que hayas sido convocado")
+              : `${filteredMeetings.length} reunión${filteredMeetings.length !== 1 ? 'es' : ''} encontrada${filteredMeetings.length !== 1 ? 's' : ''}`
             }
           </p>
         </div>
-        <Button onClick={handleCreateMeeting}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Reunión
-        </Button>
+        
+        {/* Botón crear - Para administradores (incluye fallback para undefined) */}
+        {(permissions.canCreate || user?.type === 'usuario' || !user?.type) && (
+          <Button onClick={handleCreateMeeting}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Reunión
+          </Button>
+        )}
       </div>
 
+      {/* Mensaje informativo para miembros de junta */}
+      {role === 'board-member' && user?.type === 'persona' && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            👁️ <strong>Modo de visualización:</strong> Solo puedes ver las reuniones donde has sido convocado. 
+            Los cambios los realiza el administrador de la organización.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Lista de reuniones */}
-      {meetings.length === 0 ? (
+      {filteredMeetings.length === 0 ? (
         <Card>
           <CardContent className="py-12">
             <div className="text-center">
               <CalendarDays className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No hay reuniones</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                {(role === 'admin' || user?.type === 'usuario' || !user?.type) ? 'No hay reuniones' : 'No hay reuniones para ti'}
+              </h3>
               <p className="text-muted-foreground mb-4">
-                Comienza creando tu primera reunión para organizar tu agenda.
+                {(role === 'admin' || user?.type === 'usuario' || !user?.type)
+                  ? 'Comienza creando tu primera reunión para organizar tu agenda.'
+                  : 'Aún no has sido convocado a ninguna reunión. El administrador puede agregarte a futuras reuniones.'
+                }
               </p>
-              <Button onClick={handleCreateMeeting}>
-                <Plus className="h-4 w-4 mr-2" />
-                Crear Primera Reunión
-              </Button>
+              {(permissions.canCreate || user?.type === 'usuario' || !user?.type) && (
+                <Button onClick={handleCreateMeeting}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear Primera Reunión
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {meetings.map((meeting) => (
+          {filteredMeetings.map((meeting) => (
             <Card 
               key={meeting._id} 
               className="cursor-pointer hover:shadow-md transition-shadow"

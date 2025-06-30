@@ -32,9 +32,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const usuarioResult = await authService.iniciarSesion(usuarioLoginData);
 
     if (usuarioResult.success) {
-      // Si es exitoso como usuario, agregar el tipo
+      // Si es exitoso como usuario, agregar el tipo al objeto user
       return res.status(200).json({
         ...usuarioResult,
+        user: {
+          ...usuarioResult.user,
+          type: 'usuario' // Agregar el tipo de usuario
+        },
         userType: 'usuario'
       });
     }
