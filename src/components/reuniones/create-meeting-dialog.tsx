@@ -354,10 +354,25 @@ export function CreateMeetingDialog({
       const success = !!result;
 
       if (success) {
+        // Verificar si se intentaron subir archivos pero no se pudieron por conectividad
+        const hadFiles = formData.archivos && formData.archivos.length > 0;
+        const resultHasFiles = result.archivos && result.archivos.length > 0;
+        
+        if (hadFiles && !resultHasFiles) {
+          // Se creó la reunión pero sin archivos por problemas de conectividad
+          setErrors({ 
+            general: "⚠️ Reunión creada exitosamente, pero no se pudieron subir los archivos debido a problemas de conectividad con el almacenamiento. Los archivos se pueden agregar más tarde editando la reunión." 
+          });
+        }
+        
         // Refrescar la lista de reuniones desde el servidor
         await refetch();
         resetForm();
-        onOpenChange(false);
+        
+        // Solo cerrar si no hubo problemas con archivos, para que el usuario vea el mensaje
+        if (!hadFiles || resultHasFiles) {
+          onOpenChange(false);
+        }
       } else {
         setErrors({ general: "Error al crear la reunión" });
       }    } catch {
@@ -385,10 +400,27 @@ export function CreateMeetingDialog({
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Error general */}
+          {/* Error/Warning general */}
           {errors.general && (
-            <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md">
+            <div className={`text-sm p-3 rounded-md ${
+              errors.general.startsWith('⚠️') 
+                ? 'text-orange-700 bg-orange-50 border border-orange-200' 
+                : 'text-red-500 bg-red-50'
+            }`}>
               {errors.general}
+              {errors.general.startsWith('⚠️') && (
+                <div className="mt-2">
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                    className="text-orange-700 border-orange-300 hover:bg-orange-100"
+                  >
+                    Entendido, cerrar
+                  </Button>
+                </div>
+              )}
             </div>
           )}          
           {/* Título */}

@@ -1,7 +1,7 @@
 // src/components/agenda/create-agenda-dialog.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,6 +100,7 @@ export function CreateAgendaDialog({
   };  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false); // Estado para controlar si ya se cargaron los datos
+  const loadingRef = useRef(false); // Ref para evitar cargas duplicadas
   
   // Estados para rastrear cambios en modo edición
   const [originalPuntos, setOriginalPuntos] = useState<PuntoFormData[]>([]);
@@ -121,72 +122,90 @@ export function CreateAgendaDialog({
     }
   ]);
 
-  const [editingPunto, setEditingPunto] = useState<string | null>(null);  // Función para cargar datos de la agenda en modo edición
-  const loadAgendaData = useCallback(async () => {
-    if (!editMode || !agendaToEdit || dataLoaded) return;
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Cargar datos de la agenda
-      setAgendaData({
-        nombre: agendaToEdit.nombre || "",
-      });
-
-      // Cargar puntos de la agenda
-      if (agendaToEdit._id) {
-        const puntosData = await getPuntosByAgenda(agendaToEdit._id);
-        console.log('Puntos cargados desde el backend:', puntosData);
-        
-        if (puntosData && puntosData.length > 0) {
-          const puntosFormData = puntosData.map((punto) => ({
-            id: punto._id || `temp-${Date.now()}-${Math.random()}`,
-            titulo: punto.titulo || "",
-            tipo: punto.tipo as TipoPunto,
-            duracion: punto.duracion || 15,
-            expositor: punto.expositor || "",
-            detalles: punto.detalles || "",
-            anotaciones: punto.anotaciones || "",
-            archivos: punto.archivos || [],
-          }));
-          setPuntos(puntosFormData);
-          setOriginalPuntos(JSON.parse(JSON.stringify(puntosFormData))); // Copia profunda
-          console.log('Puntos procesados para el formulario:', puntosFormData);
-        } else {
-          // Si no hay puntos, crear uno vacío para empezar
-          const defaultPuntos = [
-            {
-              id: `new-${Date.now()}`,
-              titulo: "",
-              tipo: TipoPunto.Informativo,
-              duracion: 15,
-              expositor: "",
-              detalles: "",
-              anotaciones: "",
-              archivos: [],
-            }
-          ];
-          setPuntos(defaultPuntos);
-          setOriginalPuntos([]);
-        }
-      }
-      
-      setDataLoaded(true); // Marcar que los datos fueron cargados
-    } catch (error) {
-      console.error('Error loading agenda data:', error);
-      setError('Error al cargar los datos de la agenda');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [editMode, agendaToEdit, getPuntosByAgenda, dataLoaded]);
-  
-  // useEffect para cargar datos cuando se abre en modo edición
+  const [editingPunto, setEditingPunto] = useState<string | null>(null);  // useEffect para cargar datos cuando se abre en modo edición
   useEffect(() => {
-    if (open && editMode && agendaToEdit?._id && !dataLoaded) {
-      loadAgendaData();
+    if (open && editMode && agendaToEdit?._id && !dataLoaded && !loadingRef.current) {
+      // Usar una variable para evitar múltiples llamadas
+      let isMounted = true;
+      loadingRef.current = true; // Marcar que está cargando
+      
+      const loadData = async () => {
+        if (!isMounted || dataLoaded || !loadingRef.current) return; // Triple verificación
+        
+        try {
+          setIsLoading(true);
+          setError(null);
+
+          // Cargar datos de la agenda
+          setAgendaData({
+            nombre: agendaToEdit.nombre || "",
+          });
+
+          // Cargar puntos de la agenda
+          if (agendaToEdit._id) {
+            const puntosData = await getPuntosByAgenda(agendaToEdit._id);
+            
+            if (!isMounted || dataLoaded) return; // Verificar si el componente aún está montado y datos no cargados
+            
+            console.log('Puntos cargados desde el backend:', puntosData);
+            
+            if (puntosData && puntosData.length > 0) {
+              const puntosFormData = puntosData.map((punto) => ({
+                id: punto._id || `temp-${Date.now()}-${Math.random()}`,
+                titulo: punto.titulo || "",
+                tipo: punto.tipo as TipoPunto,
+                duracion: punto.duracion || 15,
+                expositor: punto.expositor || "",
+                detalles: punto.detalles || "",
+                anotaciones: punto.anotaciones || "",
+                archivos: punto.archivos || [],
+              }));
+              setPuntos(puntosFormData);
+              setOriginalPuntos(JSON.parse(JSON.stringify(puntosFormData))); // Copia profunda
+              console.log('Puntos procesados para el formulario:', puntosFormData);
+            } else {
+              // Si no hay puntos, crear uno vacío para empezar
+              const defaultPuntos = [
+                {
+                  id: `new-${Date.now()}`,
+                  titulo: "",
+                  tipo: TipoPunto.Informativo,
+                  duracion: 15,
+                  expositor: "",
+                  detalles: "",
+                  anotaciones: "",
+                  archivos: [],
+                }
+              ];
+              setPuntos(defaultPuntos);
+              setOriginalPuntos([]);
+            }
+          }
+          
+          if (isMounted) {
+            setDataLoaded(true); // Marcar que los datos fueron cargados
+          }
+        } catch (error) {
+          console.error('Error loading agenda data:', error);
+          if (isMounted) {
+            setError('Error al cargar los datos de la agenda');
+          }
+        } finally {
+          if (isMounted) {
+            setIsLoading(false);
+            loadingRef.current = false; // Limpiar la bandera de carga
+          }
+        }
+      };
+      
+      loadData();
+      
+      return () => {
+        isMounted = false;
+        loadingRef.current = false; // Limpiar la bandera de carga
+      };
     }
-  }, [open, editMode, agendaToEdit?._id, dataLoaded, loadAgendaData]); // Agregar loadAgendaData
+  }, [open, editMode, agendaToEdit?._id, dataLoaded]); // Remover dependencias que cambian constantemente
 
   // useEffect para resetear estado cuando se cierra el diálogo
   useEffect(() => {
@@ -195,6 +214,7 @@ export function CreateAgendaDialog({
       setDataLoaded(false);
       setError(null);
       setEditingPunto(null);
+      loadingRef.current = false; // Limpiar ref de carga
       
       if (!editMode) {
         // Solo resetear datos del formulario si no está en modo edición
@@ -469,6 +489,8 @@ export function CreateAgendaDialog({
     setEditingPunto(null);
     setOriginalPuntos([]);
     setDeletedPuntoIds([]);
+    setDataLoaded(false);
+    loadingRef.current = false; // Limpiar ref de carga
   };
   const handleCancel = () => {
     setOpen(false);
