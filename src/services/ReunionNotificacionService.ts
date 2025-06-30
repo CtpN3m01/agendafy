@@ -1,6 +1,7 @@
 import { NotificacionService } from './NotificacionService';
 import { TipoNotificacion } from '@/types/NotificacionDTO';
 import { ConvocadoDTO } from '@/types/ReunionDTO';
+import { OrganizacionService } from './OrganizacionService';
 
 export interface DatosReunionNotificacion {
   reunionId: string;
@@ -27,9 +28,18 @@ export interface DatosAsignacionNotificacion {
  */
 export class ReunionNotificacionService {
   private notificacionService: NotificacionService;
+  private organizacionService: OrganizacionService;
 
   constructor() {
     this.notificacionService = new NotificacionService();
+    this.organizacionService = new OrganizacionService();
+  }
+
+  // Función privada para obtener el correo del emisor (organización)
+  private async obtenerEmisor(organizacionId: string): Promise<string> {
+    const organizacion = await this.organizacionService.obtenerOrganizacion(organizacionId);
+    if (!organizacion) throw new Error('Organización no encontrada');
+    return organizacion.correo;
   }
 
   /**
@@ -46,6 +56,9 @@ export class ReunionNotificacionService {
       exitosas: 0,
       fallidas: [] as { correo: string; error: string }[]
     };
+    console.log('Enviando notificaciones de convocatoria para la reunión:', datosReunion);
+    // Obtener el correo del emisor (organización)
+    const correoEmisor = await this.obtenerEmisor(datosReunion.emisor);
 
     // Filtrar solo miembros de la organización para notificaciones automáticas
     const miembrosParaNotificar = convocados.filter(convocado => convocado.esMiembro);
@@ -54,7 +67,7 @@ export class ReunionNotificacionService {
       try {
         await this.notificacionService.crearNotificacion(
           TipoNotificacion.CONVOCATORIA,
-          datosReunion.emisor,
+          correoEmisor,
           convocado.correo,
           {
             reunionId: datosReunion.reunionId,
@@ -89,10 +102,13 @@ export class ReunionNotificacionService {
     destinatario: string,
     datosAsignacion: DatosAsignacionNotificacion
   ): Promise<boolean> {
+
+    const correoEmisor = await this.obtenerEmisor(datosAsignacion.emisor);
+
     try {
       await this.notificacionService.crearNotificacion(
         TipoNotificacion.ASIGNACION,
-        datosAsignacion.emisor,
+        correoEmisor,
         destinatario,
         {
           reunionId: datosAsignacion.reunionId,
@@ -125,11 +141,13 @@ export class ReunionNotificacionService {
       fallidas: [] as { correo: string; error: string }[]
     };
 
+    const correoEmisor = await this.obtenerEmisor(datosReunion.emisor);
+
     for (const correo of correosDestinatarios) {
       try {
         await this.notificacionService.crearNotificacion(
           TipoNotificacion.CONVOCATORIA,
-          datosReunion.emisor,
+          correoEmisor,
           correo,
           {
             reunionId: datosReunion.reunionId,

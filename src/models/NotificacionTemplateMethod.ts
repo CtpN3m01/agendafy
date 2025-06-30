@@ -88,7 +88,7 @@ export class NotificacionAsignacion extends Notificacion {
   protected setAsunto(datos: { rolAsignado: string; fechaReunion: Date }): void {
     this.asunto = `Nueva asignación: ${datos.rolAsignado}`;
   }
-
+  
   protected setContenido(datos: { 
     rolAsignado: string; 
     fechaReunion: Date; 
