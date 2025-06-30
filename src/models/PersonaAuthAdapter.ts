@@ -2,10 +2,10 @@ import { AuthService } from '@/services/AuthService';
 import { PersonaDAOImpl, IPersonaDAO } from '@/dao/PersonaDAO';
 import { IPersona } from '@/models/Persona';
 import { PersonaLoginDTO, PersonaAuthResponseDTO, PersonaResponseDTO } from '@/types/PersonaDTO';
-import { CrearUsuarioDTO, UsuarioDTO } from '@/types/UsuarioDTO';
+import { CrearUsuarioDTO, UsuarioDTO, LoginResponseDTO } from '@/types/UsuarioDTO';
+import { CrearPersonaDTO } from '@/types/PersonaDTO';
 import { HashUtil } from '@/lib/hash';
 import { AuthUtil } from '@/lib/auth';
-import { EmailService } from '@/services/EmailService';
 
 /**
  * Adaptador que permite a las entidades Persona utilizar el AuthService
@@ -15,6 +15,7 @@ import { EmailService } from '@/services/EmailService';
  * de Persona para que sean compatibles con AuthService.
  */
 export class PersonaAuthAdapter {
+
   private authService: AuthService;
   private personaDAO: IPersonaDAO;
 
@@ -61,16 +62,16 @@ export class PersonaAuthAdapter {
 
       // Generar token con información de la persona
       const token = AuthUtil.generateToken({
-        userId: (persona as IPersona & { _id: { toString(): string } })._id.toString(),
+        userId: (persona as any)._id.toString(),
         email: persona.correo,
         nombreUsuario: `${persona.nombre}_${persona.apellidos}`,
-        type: 'persona', // Identificar que es una persona, no un usuario
+        type: 'miembro', // Identificar que es una persona miembro, no un usuario
         rol: persona.rol,
         organizacion: persona.organizacion.toString()
       });
 
       const personaResponse: PersonaResponseDTO = {
-        id: (persona as IPersona & { _id: { toString(): string } })._id.toString(),
+        id: (persona as any)._id.toString(),
         nombre: persona.nombre,
         apellidos: persona.apellidos,
         correo: persona.correo,
@@ -119,23 +120,14 @@ export class PersonaAuthAdapter {
       const resetToken = AuthUtil.generateResetToken();
       const expires = AuthUtil.getResetTokenExpiration();
 
-      await this.personaDAO.actualizarToken((persona as IPersona & { _id: { toString(): string } })._id.toString(), resetToken, expires);
+      await this.personaDAO.actualizarToken((persona as any)._id.toString(), resetToken, expires);
 
-      // Enviar email de recuperación
-      try {
-        const emailService = new EmailService();
-        await emailService.enviarCorreoRecuperacion(correo, resetToken);
-      } catch (emailError) {
-        console.error('Error al enviar email de recuperación para persona:', emailError);
-        return {
-          success: false,
-          message: 'Error al enviar el correo de recuperación. Inténtalo de nuevo más tarde.'
-        };
-      }
+      // TODO: Aquí se podría implementar el envío de email específico para personas
+      // Por ahora solo retornamos éxito con el token generado
 
       return {
         success: true,
-        message: 'Se ha enviado un correo electrónico con las instrucciones para restablecer tu contraseña.'
+        message: 'Se ha generado el token de recuperación. Verifica la configuración de email para recibir instrucciones.'
       };
     } catch (error) {
       console.error('Error en recuperación de persona:', error);
@@ -160,7 +152,7 @@ export class PersonaAuthAdapter {
       }
 
       const hashedPassword = await HashUtil.hash(nuevaContrasena);
-      await this.personaDAO.actualizarContrasena((persona as IPersona & { _id: { toString(): string } })._id.toString(), hashedPassword);
+      await this.personaDAO.actualizarContrasena((persona as any)._id.toString(), hashedPassword);
 
       return {
         success: true,
@@ -190,7 +182,7 @@ export class PersonaAuthAdapter {
       }
 
       const hashedPassword = await HashUtil.hash(nuevaContrasena);
-      await this.personaDAO.actualizarContrasena((persona as IPersona & { _id: { toString(): string } })._id.toString(), hashedPassword);
+      await this.personaDAO.actualizarContrasena((persona as any)._id.toString(), hashedPassword);
 
       return {
         success: true,
@@ -229,4 +221,64 @@ export class PersonaAuthAdapter {
       contrasena: loginData.contrasena
     };
   }
+
+  /* 
+   * Funcion que utiliza el personaDAO para buscar un usuario por id 
+  */
+
+  async buscarPorId(id: string) {
+    return this.personaDAO.buscarPorId(id);
+  }
+
+  /**
+   * Actualiza el perfil de una Persona usando personaDAO
+   */
+  async actualizarPerfil(id: string, datos: Partial<IPersona>): Promise<IPersona | null> {
+    try {
+      console.log('PersonaAuthAdapter: actualizarPerfil - ID:', id);
+      console.log('PersonaAuthAdapter: actualizarPerfil - Datos:', datos);
+
+      // Obtener los datos actuales de la persona
+      const personaActual = await this.personaDAO.buscarPorId(id);
+      if (!personaActual) {
+        throw new Error('Persona no encontrada');
+      }
+
+      // Adaptar el campo organizacion si existe y es ObjectId
+      const datosAdaptados: any = { ...datos };
+      if (datos.organizacion && typeof datos.organizacion !== 'string') {
+        datosAdaptados.organizacion = datos.organizacion.toString();
+      }
+
+      // Construir el objeto completo para el DAO
+      const datosCompletos: CrearPersonaDTO = {
+        nombre: datosAdaptados.nombre ?? personaActual.nombre,
+        apellidos: datosAdaptados.apellidos ?? personaActual.apellidos,
+        correo: datosAdaptados.correo ?? personaActual.correo,
+        rol: datosAdaptados.rol ?? personaActual.rol,
+        organizacion: datosAdaptados.organizacion ?? personaActual.organizacion,
+      };
+
+      const resultado = await this.personaDAO.actualizarPersona(id, datosCompletos);
+      console.log('PersonaAuthAdapter: actualizarPerfil - Resultado:', resultado ? 'exitoso' : 'falló');
+      return resultado;
+    } catch (error) {
+      console.error('PersonaAuthAdapter: Error en actualizarPerfil:', error);
+      throw error;
+    }
+  }
+
+  /*
+  * Verifica si un ID corresponde a una persona (miembro) existente
+  */
+  async esMiembro(id: string): Promise<boolean> {
+    try {
+      const persona = await this.personaDAO.buscarPorId(id);
+      return !!persona;
+    } catch (error) {
+      console.error('PersonaAuthAdapter: Error en esMiembro:', error);
+      return false;
+    }
+  }
+
 }

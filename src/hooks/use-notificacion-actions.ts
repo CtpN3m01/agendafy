@@ -5,6 +5,7 @@ interface UseNotificacionActionsProps {
   onMarcarLeida?: (id: string) => Promise<boolean>;
   onMarcarVariasLeidas?: (ids: string[]) => Promise<number>;
   onEliminar?: (id: string) => Promise<boolean>;
+  onVaciarBuzon?: (destinatario: string) => Promise<boolean>;
   onRefrescar?: () => Promise<void>;
 }
 
@@ -12,6 +13,7 @@ export const useNotificacionActions = ({
   onMarcarLeida,
   onMarcarVariasLeidas,
   onEliminar,
+  onVaciarBuzon,
   onRefrescar
 }: UseNotificacionActionsProps) => {
   
@@ -69,6 +71,24 @@ export const useNotificacionActions = ({
     }
   }, [onEliminar]);
 
+  const handleVaciarBuzon = useCallback(async (destinatario: string): Promise<boolean> => {
+    if (!onVaciarBuzon) return false;
+    
+    try {
+      const resultado = await onVaciarBuzon(destinatario);
+      if (resultado) {
+        toast.success("Buzón vaciado");
+      } else {
+        toast.error("No se pudo vaciar el buzón");
+      }
+      return resultado;
+    } catch (error) {
+      console.error('Error al vaciar buzón:', error);
+      toast.error("Error al vaciar buzón");
+      return false;
+    }
+  }, [onVaciarBuzon]);
+
   const handleRefrescar = useCallback(async (): Promise<void> => {
     if (!onRefrescar) return;
     
@@ -85,6 +105,7 @@ export const useNotificacionActions = ({
     handleMarcarLeida,
     handleMarcarVariasLeidas,
     handleEliminar,
+    handleVaciarBuzon,
     handleRefrescar
   };
 };

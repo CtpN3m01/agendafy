@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, Phone, Edit, Save, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { UserProfile } from "@/types";
+import { isMiembro } from '@/lib/miembro';
 
 interface ProfileInfoProps {
   user: UserProfile;
@@ -62,6 +63,23 @@ export function ProfileInfo({ user, onUpdate }: ProfileInfoProps) {
     bio: user.bio || "",
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isMiembroUser, setIsMiembroUser] = useState<boolean>(false);
+  const [isMiembroLoading, setIsMiembroLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    setIsMiembroLoading(true);
+    if (user.id) {
+      isMiembro(user.id).then(result => {
+        if (mounted) setIsMiembroUser(result);
+      }).finally(() => {
+        if (mounted) setIsMiembroLoading(false);
+      });
+    } else {
+      setIsMiembroLoading(false);
+    }
+    return () => { mounted = false; };
+  }, [user.id]);
 
   const handleSubmit = async () => {
     setIsLoading(true);
@@ -153,15 +171,31 @@ export function ProfileInfo({ user, onUpdate }: ProfileInfoProps) {
                   />
                 </div>
                 <div className="flex gap-2">
+                {/* Cargo solo si NO es miembro al editar */}
+                {!isMiembroUser && (
                   <div className="flex-1">
                     <Label htmlFor="position">Cargo</Label>
-                    <Input
-                      id="position"
-                      value={formData.position}
-                      onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
-                      placeholder="Ej: Desarrollador Senior"
-                    />
+                    {isEditing ? (
+                      <select
+                        id="position"
+                        value={formData.position}
+                        onChange={e => setFormData(prev => ({ ...prev, position: e.target.value }))}
+                        className="w-full border rounded px-2 py-2 text-sm"
+                      >
+                        <option value="">Selecciona un cargo</option>
+                        <option value="Administrador">Administrador</option>
+                      </select>
+                    ) : (
+                      <Input
+                        id="position"
+                        value={formData.position}
+                        readOnly
+                        placeholder="Ej: Desarrollador Senior"
+                      />
+                    )}
                   </div>
+                )}
+                {!isMiembroUser && (
                   <div className="flex-1">
                     <Label htmlFor="department">Departamento</Label>
                     <Input
@@ -171,7 +205,8 @@ export function ProfileInfo({ user, onUpdate }: ProfileInfoProps) {
                       placeholder="Ej: Tecnología"
                     />
                   </div>
-                </div>
+                )}
+              </div>
               </div>
             )}
           </div>
@@ -195,44 +230,50 @@ export function ProfileInfo({ user, onUpdate }: ProfileInfoProps) {
               />
             )}
           </div>
+            
+          {/* Teléfono solo si NO es miembro */}
+          {!isMiembroLoading && !isMiembroUser && (
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                Teléfono
+              </Label>
+              {!isEditing ? (
+                <p className="text-sm text-muted-foreground">
+                  {user.phone || "No especificado"}
+                </p>
+              ) : (
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="Ej: +1 234 567 8900"
+                />
+              )}
+            </div>
+          )}
+        </div>
 
+        {/* Biografía solo si NO es miembro */}
+        {!isMiembroLoading && !isMiembroUser && (
           <div className="space-y-2">
-            <Label htmlFor="phone" className="flex items-center gap-2">
-              <Phone className="h-4 w-4" />
-              Teléfono
-            </Label>
+            <Label htmlFor="bio">Biografía</Label>
             {!isEditing ? (
               <p className="text-sm text-muted-foreground">
-                {user.phone || "No especificado"}
+                {user.bio || "No hay biografía disponible"}
               </p>
             ) : (
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                placeholder="Ej: +1 234 567 8900"
+              <Textarea
+                id="bio"
+                value={formData.bio}
+                onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+                placeholder="Escribe algo sobre ti..."
+                rows={3}
               />
             )}
           </div>
-        </div>
-
-        {/* Biografía */}
-        <div className="space-y-2">
-          <Label htmlFor="bio">Biografía</Label>
-          {!isEditing ? (
-            <p className="text-sm text-muted-foreground">
-              {user.bio || "No hay biografía disponible"}
-            </p>
-          ) : (
-            <Textarea
-              id="bio"
-              value={formData.bio}
-              onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-              placeholder="Escribe algo sobre ti..."
-              rows={3}
-            />
-          )}
-        </div>        {/* Información adicional */}
+        )}
+        {/* Información adicional */}
         <div className="pt-4 border-t">
           <div className="text-xs text-muted-foreground space-y-1">
             <p>Cuenta creada: {formatDate(user.createdAt)}</p>
