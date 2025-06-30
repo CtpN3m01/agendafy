@@ -6,7 +6,7 @@ export interface JWTPayload {
   userId: string;
   email: string;
   nombreUsuario: string;
-  type?: 'usuario' | 'persona'; // Para distinguir entre Usuario y Persona
+  type?: 'usuario' | 'miembro'; // Para distinguir entre Usuario y Persona
   rol?: string; // Para el rol de la persona
   organizacion?: string; // Para la organización de la persona
 }

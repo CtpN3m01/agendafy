@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { AuthService } from '@/services/AuthService';
-import { PersonaAuthAdapter } from '@/adapters/PersonaAuthAdapter';
+import { PersonaAuthAdapter } from '@/models/PersonaAuthAdapter';
 import { UsuarioDTO } from '@/types/UsuarioDTO';
 import { PersonaLoginDTO } from '@/types/PersonaDTO';
 
@@ -60,11 +60,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           nombreUsuario: `${personaResult.persona!.nombre}_${personaResult.persona!.apellidos}`,
           nombre: personaResult.persona!.nombre,
           apellidos: personaResult.persona!.apellidos,
-          type: 'persona',
+          type: 'miembro',
           rol: personaResult.persona!.rol,
           organizacion: personaResult.persona!.organizacion
         },
-        userType: 'persona'
+        userType: 'miembro'
       });
     }
 

@@ -40,7 +40,7 @@ export function useOrganization(): UseOrganizationReturn {
 
       let url: URL;
       // Si es persona y tiene organización, buscar por id de organización
-      if (user.type === 'persona' && user.organizacion) {
+      if (user.type === 'miembro' && user.organizacion) {
         url = new URL('/api/mongo/organizacion/obtenerOrganizacion', window.location.origin);
         url.searchParams.append('id', user.organizacion);
       } else {

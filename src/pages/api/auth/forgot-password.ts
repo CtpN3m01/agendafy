@@ -1,7 +1,7 @@
 // src/pages/api/auth/forgot-password.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { AuthService } from '@/services/AuthService';
-import { PersonaAuthAdapter } from '@/adapters/PersonaAuthAdapter';
+import { PersonaAuthAdapter } from '@/models/PersonaAuthAdapter';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
